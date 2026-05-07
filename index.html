@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>
+      Chocolate Avenue Grooming Salon | Professional Dog Grooming in Hershey, PA
+    </title>
+
+    <meta
+      name="description"
+      content="Chocolate Avenue Grooming Salon provides professional dog grooming services in Hershey, PA. Baths, haircuts, nail trims, de-shedding, and loving care for all breeds."
+    />
+
+    <meta
+      name="keywords"
+      content="Dog Grooming Hershey PA, Hershey Pet Grooming, Dog Salon Hershey, Pet Spa Hershey, Chocolate Avenue Grooming"
+    />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
+    />
+
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <style>
+      body {
+        background: #fffaf5;
+      }
+
+      .hero-overlay {
+        background: linear-gradient(
+          to right,
+          rgba(0, 0, 0, 0.75),
+          rgba(0, 0, 0, 0.45)
+        );
+      }
+
+      .glass {
+        backdrop-filter: blur(12px);
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .fade-up {
+        opacity: 0;
+        transform: translateY(40px);
+        transition: all 0.8s ease;
+      }
+
+      .fade-up.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .gallery-img {
+        transition: 0.4s;
+      }
+
+      .gallery-img:hover {
+        transform: scale(1.03);
+      }
+
+      .floating-call {
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.08);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+    </style>
+  </head>
+
+  <body class="font-sans text-gray-800">
+    <!-- NAVBAR -->
+    <nav class="bg-white/95 backdrop-blur-md shadow-md sticky top-0 z-50">
+      <div
+        class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center"
+      >
+        <div class="flex items-center gap-3">
+          <div
+            class="bg-amber-600 w-12 h-12 rounded-full flex items-center justify-center text-white"
+          >
+            <i class="fa-solid fa-paw text-xl"></i>
+          </div>
+
+          <div>
+            <h1
+              class="text-xl md:text-2xl font-bold text-amber-700 leading-tight"
+            >
+              Chocolate Avenue
+            </h1>
+            <p class="text-sm font-semibold text-gray-700">Grooming Salon</p>
+          </div>
+        </div>
+
+        <div class="hidden md:flex gap-8 text-lg font-medium">
+          <a href="#services" class="hover:text-amber-600 transition"
+            >Services</a
+          >
+          <a href="#gallery" class="hover:text-amber-600 transition">Gallery</a>
+          <a href="#about" class="hover:text-amber-600 transition">About</a>
+          <a href="#reviews" class="hover:text-amber-600 transition">Reviews</a>
+          <a href="#contact" class="hover:text-amber-600 transition">Contact</a>
+        </div>
+
+        <a
+          href="tel:7174333714"
+          class="hidden md:flex items-center gap-3 bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-xl font-semibold transition shadow-lg"
+        >
+          <i class="fa-solid fa-phone"></i>
+          (717) 433-3714
+        </a>
+      </div>
+    </nav>
+
+    <!-- HERO -->
+    <section class="relative min-h-screen flex items-center">
+      <div class="absolute inset-0">
+        <img
+          src="https://emerald-chemical-turkey-320.mypinata.cloud/ipfs/bafkreicyiyhdkiaf7sf6fip2hwsngj7wceg35q6b53yicbho2vcz42cjzq"
+          alt="Group of dogs sitting together"
+          class="w-full h-full object-cover"
+        />
+
+        <div class="absolute inset-0 hero-overlay"></div>
+      </div>
+
+      <div class="relative z-10 max-w-7xl mx-auto px-6 py-24">
+        <div class="max-w-3xl">
+          <div
+            class="glass inline-flex items-center gap-3 text-white px-5 py-3 rounded-full mb-8 border border-white/20"
+          >
+            <i class="fa-solid fa-star text-yellow-300"></i>
+            Professional Grooming in Hershey, PA
+          </div>
+
+          <h1
+            class="text-5xl md:text-7xl font-black text-white leading-tight mb-8"
+          >
+            Pampered Pets on
+            <span class="text-amber-400"> Chocolate Avenue </span>
+          </h1>
+
+          <p class="text-xl md:text-2xl text-gray-200 leading-relaxed mb-10">
+            Loving, gentle, and professional dog grooming for every breed and
+            personality. Baths, haircuts, nail trims, de-shedding, and more.
+          </p>
+
+          <div class="flex flex-wrap gap-5">
+            <a
+              href="#contact"
+              class="bg-amber-600 hover:bg-amber-700 text-white px-8 py-5 rounded-2xl font-bold text-lg shadow-2xl transition"
+            >
+              Request Grooming Session
+            </a>
+
+            <a
+              href="tel:7174333714"
+              class="border-2 border-white text-white hover:bg-white hover:text-black px-8 py-5 rounded-2xl font-bold text-lg transition"
+            >
+              Call Now
+            </a>
+          </div>
+
+          <div class="mt-12 flex flex-wrap gap-8 text-white">
+            <div class="flex items-center gap-3">
+              <i class="fa-solid fa-check text-green-400"></i>
+              All Breeds Welcome
+            </div>
+
+            <div class="flex items-center gap-3">
+              <i class="fa-solid fa-check text-green-400"></i>
+              Gentle Grooming
+            </div>
+
+            <div class="flex items-center gap-3">
+              <i class="fa-solid fa-check text-green-400"></i>
+              Appointment Only
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SERVICES -->
+    <section id="services" class="py-24 bg-white fade-up">
+      <div class="max-w-7xl mx-auto px-6">
+        <div class="text-center mb-16">
+          <h2 class="text-5xl font-black mb-5">Grooming Services</h2>
+
+          <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+            Full-service grooming designed to keep your dog healthy, happy,
+            clean, and looking amazing.
+          </p>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-8">
+          <div
+            class="bg-amber-50 rounded-3xl p-10 shadow-sm hover:shadow-xl transition"
+          >
+            <div
+              class="w-20 h-20 rounded-2xl bg-amber-600 text-white flex items-center justify-center text-4xl mb-8"
+            >
+              <i class="fa-solid fa-bath"></i>
+            </div>
+
+            <h3 class="text-3xl font-bold mb-4">Bath & Brush</h3>
+
+            <p class="text-gray-600 text-lg leading-relaxed">
+              Premium shampoo, conditioning treatment, blow dry, brushing, ear
+              cleaning, and nail trimming.
+            </p>
+          </div>
+
+          <div
+            class="bg-amber-50 rounded-3xl p-10 shadow-sm hover:shadow-xl transition"
+          >
+            <div
+              class="w-20 h-20 rounded-2xl bg-amber-600 text-white flex items-center justify-center text-4xl mb-8"
+            >
+              <i class="fa-solid fa-scissors"></i>
+            </div>
+
+            <h3 class="text-3xl font-bold mb-4">Full Haircuts</h3>
+
+            <p class="text-gray-600 text-lg leading-relaxed">
+              Breed-specific cuts or personalized styles to keep your pup
+              looking their best.
+            </p>
+          </div>
+
+          <div
+            class="bg-amber-50 rounded-3xl p-10 shadow-sm hover:shadow-xl transition"
+          >
+            <div
+              class="w-20 h-20 rounded-2xl bg-amber-600 text-white flex items-center justify-center text-4xl mb-8"
+            >
+              <i class="fa-solid fa-paw"></i>
+            </div>
+
+            <h3 class="text-3xl font-bold mb-4">Spa Add-Ons</h3>
+
+            <p class="text-gray-600 text-lg leading-relaxed">
+              De-shedding, teeth brushing, flea treatments, bows, bandanas, and
+              extra pampering.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- GALLERY -->
+    <section id="gallery" class="py-24 bg-amber-50 fade-up">
+      <div class="max-w-7xl mx-auto px-6">
+        <div class="text-center mb-16">
+          <h2 class="text-5xl font-black mb-5">Happy Clients</h2>
+
+          <p class="text-xl text-gray-600">
+            Real dogs. Real grooming. Real happy tails.
+          </p>
+        </div>
+
+        <div class="flex justify-center items-center">
+          <div class="overflow-hidden rounded-3xl shadow-2xl max-w-4xl w-full">
+            <img
+              src="https://emerald-chemical-turkey-320.mypinata.cloud/ipfs/bafkreictok6rs2vwjtqswxtb5dgxpxxopvd7xcn2qoxcjwukegbcnlopwy"
+              alt="Large dogs sitting outside"
+              class="gallery-img w-full h-auto object-cover"
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section id="about" class="py-24 bg-white fade-up">
+      <div
+        class="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center"
+      >
+        <div>
+          <h2 class="text-5xl font-black mb-8">
+            Local Groomers Who Truly Love Dogs
+          </h2>
+
+          <p class="text-lg text-gray-700 leading-relaxed mb-6">
+            At Chocolate Avenue Grooming Salon, we know pets are family. Our
+            goal is to make every grooming session calm, safe, and stress-free
+            while delivering professional results you'll love.
+          </p>
+
+          <p class="text-lg text-gray-700 leading-relaxed mb-10">
+            Whether your dog needs a quick bath or a full grooming makeover, we
+            provide patient, personalized care for dogs of all breeds and sizes.
+          </p>
+
+          <div class="grid grid-cols-2 gap-6">
+            <div class="bg-amber-50 rounded-2xl p-6">
+              <i class="fa-solid fa-heart text-red-500 text-3xl mb-4"></i>
+              <h3 class="font-bold text-xl mb-2">Gentle Care</h3>
+              <p class="text-gray-600">Comfort-focused grooming experience.</p>
+            </div>
+
+            <div class="bg-amber-50 rounded-2xl p-6">
+              <i class="fa-solid fa-award text-amber-600 text-3xl mb-4"></i>
+              <h3 class="font-bold text-xl mb-2">Professional</h3>
+              <p class="text-gray-600">Experienced local groomers.</p>
+            </div>
+
+            <div class="bg-amber-50 rounded-2xl p-6">
+              <i class="fa-solid fa-soap text-blue-500 text-3xl mb-4"></i>
+              <h3 class="font-bold text-xl mb-2">Clean & Safe</h3>
+              <p class="text-gray-600">Sanitized grooming stations.</p>
+            </div>
+
+            <div class="bg-amber-50 rounded-2xl p-6">
+              <i
+                class="fa-solid fa-location-dot text-green-600 text-3xl mb-4"
+              ></i>
+              <h3 class="font-bold text-xl mb-2">Hershey Local</h3>
+              <p class="text-gray-600">Convenient Chocolate Avenue location.</p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div
+            class="bg-gradient-to-br from-amber-600 to-amber-800 rounded-[40px] p-10 text-white shadow-2xl"
+          >
+            <h3 class="text-4xl font-black mb-8">Why Pet Owners Choose Us</h3>
+
+            <div class="space-y-6 text-lg">
+              <div class="flex gap-4">
+                <i class="fa-solid fa-check mt-1 text-green-300"></i>
+                Personalized attention for every dog
+              </div>
+
+              <div class="flex gap-4">
+                <i class="fa-solid fa-check mt-1 text-green-300"></i>
+                Stress-free grooming environment
+              </div>
+
+              <div class="flex gap-4">
+                <i class="fa-solid fa-check mt-1 text-green-300"></i>
+                Friendly and experienced team
+              </div>
+
+              <div class="flex gap-4">
+                <i class="fa-solid fa-check mt-1 text-green-300"></i>
+                Locally owned and operated
+              </div>
+
+              <div class="flex gap-4">
+                <i class="fa-solid fa-check mt-1 text-green-300"></i>
+                Convenient appointment scheduling
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- REVIEWS -->
+    <section id="reviews" class="py-24 bg-amber-50 fade-up">
+      <div class="max-w-7xl mx-auto px-6">
+        <div class="text-center mb-16">
+          <h2 class="text-5xl font-black mb-5">What Pet Parents Say</h2>
+
+          <div class="flex justify-center text-yellow-400 text-2xl gap-2 mb-4">
+            <i class="fa-solid fa-star"></i>
+            <i class="fa-solid fa-star"></i>
+            <i class="fa-solid fa-star"></i>
+            <i class="fa-solid fa-star"></i>
+            <i class="fa-solid fa-star"></i>
+          </div>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-8">
+          <div class="bg-white p-10 rounded-3xl shadow-md">
+            <p class="italic text-lg text-gray-700 leading-relaxed">
+              "They always take such amazing care of our dog. He comes home
+              clean, happy, and looking adorable every time."
+            </p>
+
+            <div class="mt-8 font-bold text-amber-700">— Hershey Customer</div>
+          </div>
+
+          <div class="bg-white p-10 rounded-3xl shadow-md">
+            <p class="italic text-lg text-gray-700 leading-relaxed">
+              "Professional grooming and genuinely caring staff. Highly
+              recommend for nervous or anxious dogs."
+            </p>
+
+            <div class="mt-8 font-bold text-amber-700">— Local Pet Parent</div>
+          </div>
+
+          <div class="bg-white p-10 rounded-3xl shadow-md">
+            <p class="italic text-lg text-gray-700 leading-relaxed">
+              "Best grooming salon around Hershey. Friendly service and
+              beautiful grooming results every visit."
+            </p>
+
+            <div class="mt-8 font-bold text-amber-700">— Happy Client</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTACT -->
+    <section id="contact" class="py-24 bg-white fade-up">
+      <div class="max-w-7xl mx-auto px-6">
+        <div class="text-center mb-16">
+          <h2 class="text-5xl font-black mb-5">Request a Grooming Session</h2>
+
+          <p class="text-xl text-gray-600">
+            Call, text, or send us a request below.
+          </p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-12">
+          <div>
+            <div class="bg-amber-50 rounded-3xl p-10 shadow-sm">
+              <div class="space-y-10">
+                <div class="flex gap-5">
+                  <div class="text-amber-600 text-3xl">
+                    <i class="fa-solid fa-location-dot"></i>
+                  </div>
+
+                  <div>
+                    <h3 class="font-bold text-2xl mb-2">Address</h3>
+                    <p class="text-lg text-gray-700">
+                      1514 East Chocolate Avenue<br />
+                      Hershey, PA 17033
+                    </p>
+                  </div>
+                </div>
+
+                <div class="flex gap-5">
+                  <div class="text-amber-600 text-3xl">
+                    <i class="fa-solid fa-phone"></i>
+                  </div>
+
+                  <div>
+                    <h3 class="font-bold text-2xl mb-2">Phone</h3>
+                    <a
+                      href="tel:7174333714"
+                      class="text-lg text-gray-700 hover:text-amber-600"
+                    >
+                      (717) 433-3714
+                    </a>
+                  </div>
+                </div>
+
+                <div class="flex gap-5">
+                  <div class="text-blue-600 text-3xl">
+                    <i class="fa-brands fa-facebook"></i>
+                  </div>
+
+                  <div>
+                    <h3 class="font-bold text-2xl mb-2">Facebook</h3>
+
+                    <a
+                      href="https://www.facebook.com/ChocolateAvenueGroomingSalon/"
+                      target="_blank"
+                      aria-label="Facebook"
+                      class="text-lg text-blue-600 hover:underline"
+                    >
+                      Follow us on Facebook
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-8 overflow-hidden rounded-3xl shadow-xl">
+              <iframe
+                src="https://www.google.com/maps?q=1514+East+Chocolate+Avenue+Hershey+PA&output=embed"
+                width="100%"
+                height="350"
+                style="border: 0"
+                allowfullscreen=""
+                loading="lazy"
+              >
+              </iframe>
+            </div>
+          </div>
+
+          <!-- CONTACT FORM — EmailJS -->
+          <form
+            id="groomingForm"
+            class="bg-amber-50 rounded-3xl p-10 shadow-sm space-y-6"
+          >
+            <div>
+              <label class="block font-semibold mb-3">Your Name</label>
+              <input
+                type="text"
+                name="name"
+                required
+                class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:border-amber-600"
+              />
+            </div>
+
+            <div>
+              <label class="block font-semibold mb-3">Email</label>
+              <input
+                type="email"
+                name="email"
+                required
+                class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:border-amber-600"
+              />
+            </div>
+
+            <div>
+              <label class="block font-semibold mb-3">Phone Number</label>
+              <input
+                type="tel"
+                name="phone"
+                required
+                class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:border-amber-600"
+              />
+            </div>
+
+            <div>
+              <label class="block font-semibold mb-3"
+                >Tell Us About Your Dog</label
+              >
+              <textarea
+                name="message"
+                rows="5"
+                required
+                placeholder="Breed, grooming needs, preferred appointment date, etc."
+                class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:border-amber-600"
+              ></textarea>
+            </div>
+
+            <button
+              type="submit"
+              id="submitBtn"
+              class="w-full bg-amber-600 hover:bg-amber-700 text-white py-5 rounded-2xl text-xl font-bold shadow-xl transition"
+            >
+              Request Appointment
+            </button>
+
+            <p id="formMsg" class="text-center font-semibold hidden"></p>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="bg-gray-950 text-gray-400 py-16">
+      <div class="max-w-7xl mx-auto px-6 text-center">
+        <div class="flex justify-center mb-8">
+          <div
+            class="bg-amber-600 w-16 h-16 rounded-full flex items-center justify-center text-white text-3xl"
+          >
+            <i class="fa-solid fa-paw"></i>
+          </div>
+        </div>
+
+        <h3 class="text-3xl font-black text-white mb-4">
+          Chocolate Avenue Grooming Salon
+        </h3>
+
+        <p class="text-lg mb-8">
+          Professional Dog Grooming in Hershey, Pennsylvania
+        </p>
+
+        <div class="flex justify-center gap-8 mb-10 text-3xl">
+          <a
+            href="https://www.facebook.com/ChocolateAvenueGroomingSalon/"
+            target="_blank"
+            aria-label="Facebook"
+            class="hover:text-blue-500 transition"
+          >
+            <i class="fa-brands fa-facebook"></i>
+          </a>
+
+          <a
+            href="tel:7174333714"
+            aria-label="Phone"
+            class="hover:text-amber-500 transition"
+          >
+            <i class="fa-solid fa-phone"></i>
+          </a>
+        </div>
+
+        <div class="text-sm border-t border-gray-800 pt-8">
+          © 2026 Chocolate Avenue Grooming Salon • All Rights Reserved
+        </div>
+      </div>
+    </footer>
+
+    <!-- FLOATING CALL BUTTON -->
+    <a
+      href="tel:7174333714"
+      class="floating-call fixed bottom-5 right-5 bg-amber-600 hover:bg-amber-700 text-white w-16 h-16 rounded-full shadow-2xl flex items-center justify-center text-2xl z-50 md:hidden"
+    >
+      <i class="fa-solid fa-phone"></i>
+    </a>
+
+    <script>
+      // ---- EmailJS Init ----
+      emailjs.init("KmW8d6wt0pthfowkY");
+
+      document
+        .getElementById("groomingForm")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+
+          const btn = document.getElementById("submitBtn");
+          const msg = document.getElementById("formMsg");
+
+          btn.textContent = "Sending...";
+          btn.disabled = true;
+
+          emailjs
+            .send("service_xfesk05", "template_2ftwjch", {
+              name: this.name.value,
+              email: this.email.value,
+              phone: this.phone.value,
+              message: this.message.value,
+            })
+            .then(() => {
+              msg.textContent = "✅ Request sent! We'll be in touch soon.";
+              msg.classList.remove("hidden", "text-red-600");
+              msg.classList.add("text-green-600");
+              this.reset();
+            })
+            .catch(() => {
+              msg.textContent =
+                "❌ Something went wrong. Please call us at (717) 433-3714.";
+              msg.classList.remove("hidden", "text-green-600");
+              msg.classList.add("text-red-600");
+            })
+            .finally(() => {
+              btn.textContent = "Request Appointment";
+              btn.disabled = false;
+            });
+        });
+
+      // ---- Scroll Animation ----
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) entry.target.classList.add("show");
+        });
+      });
+
+      document
+        .querySelectorAll(".fade-up")
+        .forEach((el) => observer.observe(el));
+    </script>
+  </body>
+</html>

@@ -90,10 +90,6 @@
         collection,
         getDocs,
         addDoc,
-        doc,
-        getDoc,
-        query,
-        where,
       } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
       const firebaseConfig = {
@@ -115,12 +111,12 @@
         let currentDate = new Date();
         let selectedDate = "";
         let selectedTime = "";
-        let blockedDates = new Set();
 
-        // Cache of booked times per date: { "2026-05-10": Set(["09:00", "11:00"]) }
-        let bookedTimesByDate = {};
+        // Set of "YYYY-MM-DD_HH:MM" strings that are blocked (approved by admin)
+        // This now matches exactly what the admin dashboard writes to /availability/
+        let blockedSlots = new Set();
 
-        const openDays = new Set([2, 3, 4, 5, 6]); // Tue-Sat
+        const openDays = new Set([2, 3, 4, 5, 6]); // Tue–Sat
         const timeSlots = [
           "09:00",
           "10:00",
@@ -139,16 +135,13 @@
         }
 
         function toDateString(date) {
-          return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
-            date.getDate(),
-          )}`;
+          return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
         }
 
         function toPrettyDate(dateStr) {
           if (!dateStr) return "No date selected";
           const [y, m, d] = dateStr.split("-").map(Number);
-          const date = new Date(y, m - 1, d);
-          return date.toLocaleDateString(undefined, {
+          return new Date(y, m - 1, d).toLocaleDateString(undefined, {
             weekday: "long",
             year: "numeric",
             month: "long",
@@ -172,61 +165,36 @@
           return check < today;
         }
 
-        async function loadBlockedDates() {
-          blockedDates = new Set();
+        // Slot key matches exactly what admin writes: "YYYY-MM-DD_HH:MM"
+        function slotKey(date, time) {
+          return `${date}_${time}`;
+        }
 
-          try {
-            const snap = await getDocs(collection(db, "availability"));
-            snap.forEach((d) => {
-              const data = d.data();
-              if (data?.blocked === true && d.id) {
-                blockedDates.add(d.id);
-              }
-            });
-          } catch (error) {
-            console.warn("Could not load blocked dates yet.", error);
-          }
+        function isSlotBlocked(date, time) {
+          return blockedSlots.has(slotKey(date, time));
+        }
+
+        // Returns true if ALL time slots on a date are blocked (show day as fully booked)
+        function isDayFullyBooked(dateStr) {
+          return timeSlots.every((t) => blockedSlots.has(slotKey(dateStr, t)));
         }
 
         /**
-         * Load all approved appointments and build a map of date -> Set of booked times.
-         * We treat both "approved" and "pending" as taken so a slot can't be double-booked
-         * while an approval is in progress. Adjust the statuses array if you only want
-         * confirmed appointments to block.
+         * Load blocked slots from the `availability` collection.
+         * Each doc ID is "YYYY-MM-DD_HH:MM" and has blocked: true when approved.
          */
-        async function loadBookedTimes() {
-          bookedTimesByDate = {};
-
+        async function loadBlockedSlots() {
+          blockedSlots = new Set();
           try {
-            // Fetch all appointments that are approved (confirmed bookings block the slot)
-            const snap = await getDocs(collection(db, "appointments"));
+            const snap = await getDocs(collection(db, "availability"));
             snap.forEach((d) => {
-              const data = d.data();
-              // Block slots for approved appointments; remove "pending" from this list
-              // if you only want confirmed bookings to block.
-              const blockedStatuses = ["approved", "pending"];
-              if (
-                data?.date &&
-                data?.time &&
-                blockedStatuses.includes(data.status)
-              ) {
-                if (!bookedTimesByDate[data.date]) {
-                  bookedTimesByDate[data.date] = new Set();
-                }
-                bookedTimesByDate[data.date].add(data.time);
+              if (d.data()?.blocked === true) {
+                blockedSlots.add(d.id); // e.g. "2026-05-09_09:00"
               }
             });
-          } catch (error) {
-            console.warn("Could not load booked times.", error);
+          } catch (err) {
+            console.warn("Could not load availability.", err);
           }
-        }
-
-        function isTimeBooked(dateStr, time) {
-          return bookedTimesByDate[dateStr]?.has(time) ?? false;
-        }
-
-        function isBlocked(dateStr) {
-          return blockedDates.has(dateStr);
         }
 
         function renderCalendar() {
@@ -267,26 +235,35 @@
             const dayOfWeek = dateObj.getDay();
             const closed = !openDays.has(dayOfWeek);
             const past = isPastDate(dateObj);
-            const blocked = isBlocked(dateStr);
+            const fullyBooked = isDayFullyBooked(dateStr);
             const selected = selectedDate === dateStr;
 
             const btn = document.createElement("button");
             btn.type = "button";
-            btn.className =
-              "h-12 rounded-2xl text-sm font-semibold transition border shadow-sm flex items-center justify-center " +
-              (past || closed
-                ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                : blocked
-                  ? "bg-red-200 text-red-900 border-red-300 cursor-not-allowed"
-                  : selected
-                    ? "bg-amber-600 text-white border-amber-600"
-                    : "bg-green-100 text-gray-800 border-green-200 hover:bg-green-200");
+
+            if (past || closed) {
+              btn.className =
+                "h-12 rounded-2xl text-sm font-semibold border shadow-sm flex items-center justify-center bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed";
+              btn.disabled = true;
+              btn.title = closed ? "Closed" : "Past date";
+            } else if (fullyBooked) {
+              btn.className =
+                "h-12 rounded-2xl text-sm font-semibold border shadow-sm flex items-center justify-center bg-red-100 text-red-400 border-red-200 cursor-not-allowed line-through";
+              btn.disabled = true;
+              btn.title = "Fully booked";
+            } else if (selected) {
+              btn.className =
+                "h-12 rounded-2xl text-sm font-semibold border shadow-sm flex items-center justify-center bg-amber-600 text-white border-amber-600";
+              btn.title = "Selected";
+            } else {
+              btn.className =
+                "h-12 rounded-2xl text-sm font-semibold border shadow-sm flex items-center justify-center bg-green-100 text-gray-800 border-green-200 hover:bg-green-200 transition";
+              btn.title = "Available";
+            }
 
             btn.textContent = String(day);
 
-            if (past || closed || blocked) {
-              btn.disabled = true;
-            } else {
+            if (!past && !closed && !fullyBooked) {
               btn.addEventListener("click", async () => {
                 selectedDate = dateStr;
                 selectedTime = "";
@@ -298,59 +275,42 @@
                 document.getElementById("selectedTimeText").textContent =
                   "Select a time below";
                 document.getElementById("timePanel").classList.remove("hidden");
-                await renderTimeSlots(selectedDate);
+                renderTimeSlots(selectedDate);
                 renderCalendar();
               });
             }
-
-            btn.title = blocked
-              ? "Booked day"
-              : closed
-                ? "Closed"
-                : past
-                  ? "Past date"
-                  : "Available";
 
             grid.appendChild(btn);
           }
         }
 
-        async function renderTimeSlots(dateStr) {
+        function renderTimeSlots(dateStr) {
           const timeGrid = document.getElementById("timeGrid");
           const notice = document.getElementById("timeNotice");
           if (!timeGrid || !notice) return;
 
           timeGrid.innerHTML = "";
-
-          if (isBlocked(dateStr)) {
-            notice.textContent =
-              "This day is already booked and cannot be selected.";
-          } else {
-            notice.textContent = "Choose from the open hours below.";
-          }
+          notice.textContent = "Choose from the open hours below.";
 
           timeSlots.forEach((time) => {
             const btn = document.createElement("button");
             btn.type = "button";
             btn.textContent = toPrettyTime(time);
 
-            const isDayBlocked = isBlocked(dateStr);
-            const isSlotBooked = isTimeBooked(dateStr, time);
+            const isBlocked = isSlotBlocked(dateStr, time);
             const isChosen = selectedTime === time;
-            const unavailable = isDayBlocked || isSlotBooked;
 
-            if (unavailable) {
+            if (isBlocked) {
               btn.disabled = true;
               btn.className =
                 "px-3 py-3 rounded-2xl border text-sm font-semibold bg-red-100 text-red-400 border-red-200 cursor-not-allowed line-through";
-              btn.title = isDayBlocked ? "Booked day" : "Already booked";
+              btn.title = "Already booked";
             } else {
               btn.className =
                 "px-3 py-3 rounded-2xl border text-sm font-semibold transition " +
                 (isChosen
                   ? "bg-amber-600 text-white border-amber-600"
                   : "bg-white hover:bg-amber-100 border-amber-200");
-
               btn.addEventListener("click", () => {
                 selectedTime = time;
                 document.getElementById("selectedTimeInput").value =
@@ -368,13 +328,11 @@
         async function openCalendar() {
           const modal = document.getElementById("calendarModal");
           modal.classList.remove("hidden");
-          // Load both blocked days AND booked time slots
-          await Promise.all([loadBlockedDates(), loadBookedTimes()]);
+          await loadBlockedSlots();
           renderCalendar();
-
           if (selectedDate) {
             document.getElementById("timePanel").classList.remove("hidden");
-            await renderTimeSlots(selectedDate);
+            renderTimeSlots(selectedDate);
           }
         }
 
@@ -387,31 +345,26 @@
         const modal = document.getElementById("calendarModal");
 
         openBtn.addEventListener("click", openCalendar);
-
-        closeBtn.addEventListener("click", () => {
-          modal.classList.add("hidden");
-        });
-
-        closeBottomBtn.addEventListener("click", () => {
-          modal.classList.add("hidden");
-        });
-
+        closeBtn.addEventListener("click", () => modal.classList.add("hidden"));
+        closeBottomBtn.addEventListener("click", () =>
+          modal.classList.add("hidden"),
+        );
         modal.addEventListener("click", (e) => {
           if (e.target === modal) modal.classList.add("hidden");
         });
 
         prevBtn.addEventListener("click", async () => {
           currentDate.setMonth(currentDate.getMonth() - 1);
-          await Promise.all([loadBlockedDates(), loadBookedTimes()]);
+          await loadBlockedSlots();
           renderCalendar();
-          if (selectedDate) await renderTimeSlots(selectedDate);
+          if (selectedDate) renderTimeSlots(selectedDate);
         });
 
         nextBtn.addEventListener("click", async () => {
           currentDate.setMonth(currentDate.getMonth() + 1);
-          await Promise.all([loadBlockedDates(), loadBookedTimes()]);
+          await loadBlockedSlots();
           renderCalendar();
-          if (selectedDate) await renderTimeSlots(selectedDate);
+          if (selectedDate) renderTimeSlots(selectedDate);
         });
 
         form.addEventListener("submit", async function (e) {
@@ -430,23 +383,15 @@
           }
 
           try {
-            // Re-fetch latest availability before submitting to prevent race conditions
-            await Promise.all([loadBlockedDates(), loadBookedTimes()]);
+            // Re-fetch latest slots right before submitting to prevent race conditions
+            await loadBlockedSlots();
 
-            if (isBlocked(date)) {
-              msg.textContent = "That day is already booked.";
-              msg.classList.remove("hidden", "text-green-600");
-              msg.classList.add("text-red-600");
-              return;
-            }
-
-            if (isTimeBooked(date, time)) {
+            if (isSlotBlocked(date, time)) {
               msg.textContent =
-                "That time slot was just booked by someone else. Please choose another time.";
+                "That time was just booked. Please choose another.";
               msg.classList.remove("hidden", "text-green-600");
               msg.classList.add("text-red-600");
-              // Refresh the time grid so they can see the updated availability
-              await renderTimeSlots(date);
+              renderTimeSlots(date);
               return;
             }
 
@@ -489,9 +434,9 @@
               "No date selected";
             document.getElementById("selectedTimeText").textContent =
               "No time selected";
-
             document.getElementById("timePanel").classList.add("hidden");
-            await Promise.all([loadBlockedDates(), loadBookedTimes()]);
+
+            await loadBlockedSlots();
             renderCalendar();
           } catch (error) {
             console.error("Booking error:", error);
@@ -510,16 +455,12 @@
             if (entry.isIntersecting) entry.target.classList.add("show");
           });
         });
-
         document
           .querySelectorAll(".fade-up")
           .forEach((el) => observer.observe(el));
 
-        renderCalendar();
-        // Load both blocked dates AND booked times on initial render
-        Promise.all([loadBlockedDates(), loadBookedTimes()]).then(
-          renderCalendar,
-        );
+        // Initial load
+        loadBlockedSlots().then(renderCalendar);
       });
     </script>
 
@@ -534,7 +475,6 @@
           >
             <i class="fa-solid fa-paw text-xl"></i>
           </div>
-
           <div>
             <h1
               class="text-xl md:text-2xl font-bold text-amber-700 leading-tight"
@@ -544,7 +484,6 @@
             <p class="text-sm font-semibold text-gray-700">Grooming Salon</p>
           </div>
         </div>
-
         <div class="hidden md:flex gap-8 text-lg font-medium">
           <a href="#services" class="hover:text-amber-600 transition"
             >Services</a
@@ -554,7 +493,6 @@
           <a href="#reviews" class="hover:text-amber-600 transition">Reviews</a>
           <a href="#contact" class="hover:text-amber-600 transition">Contact</a>
         </div>
-
         <a
           href="tel:7174333714"
           class="hidden md:flex items-center gap-3 bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-xl font-semibold transition shadow-lg"
@@ -575,7 +513,6 @@
         />
         <div class="absolute inset-0 hero-overlay"></div>
       </div>
-
       <div class="relative z-10 max-w-7xl mx-auto px-6 py-24">
         <div class="max-w-3xl">
           <div
@@ -584,19 +521,16 @@
             <i class="fa-solid fa-star text-yellow-300"></i>
             Professional Grooming in Hershey, PA
           </div>
-
           <h1
             class="text-5xl md:text-7xl font-black text-white leading-tight mb-8"
           >
             Pampered Pets on
-            <span class="text-amber-400"> Chocolate Avenue </span>
+            <span class="text-amber-400">Chocolate Avenue</span>
           </h1>
-
           <p class="text-xl md:text-2xl text-gray-200 leading-relaxed mb-10">
             Loving, gentle, and professional dog grooming for every breed and
             personality. Baths, haircuts, nail trims, de-shedding, and more.
           </p>
-
           <div class="flex flex-wrap gap-5">
             <a
               href="#contact"
@@ -604,7 +538,6 @@
             >
               Request Grooming Session
             </a>
-
             <a
               href="tel:7174333714"
               class="border-2 border-white text-white hover:bg-white hover:text-black px-8 py-5 rounded-2xl font-bold text-lg transition"
@@ -612,21 +545,16 @@
               Call Now
             </a>
           </div>
-
           <div class="mt-12 flex flex-wrap gap-8 text-white">
             <div class="flex items-center gap-3">
-              <i class="fa-solid fa-check text-green-400"></i>
-              All Breeds Welcome
+              <i class="fa-solid fa-check text-green-400"></i> All Breeds
+              Welcome
             </div>
-
             <div class="flex items-center gap-3">
-              <i class="fa-solid fa-check text-green-400"></i>
-              Gentle Grooming
+              <i class="fa-solid fa-check text-green-400"></i> Gentle Grooming
             </div>
-
             <div class="flex items-center gap-3">
-              <i class="fa-solid fa-check text-green-400"></i>
-              Appointment Only
+              <i class="fa-solid fa-check text-green-400"></i> Appointment Only
             </div>
           </div>
         </div>
@@ -638,7 +566,6 @@
       <div class="max-w-7xl mx-auto px-6">
         <div class="text-center mb-16">
           <h2 class="text-5xl font-black mb-5">Grooming Services</h2>
-
           <div
             class="inline-flex flex-col sm:flex-row items-center gap-4 bg-amber-50 border border-amber-200 rounded-2xl px-8 py-5 mb-8 shadow-sm"
           >
@@ -671,7 +598,6 @@
               </div>
             </div>
           </div>
-
           <p class="text-xl text-gray-600 max-w-3xl mx-auto">
             Full-service grooming designed to keep your dog healthy, happy,
             clean, and looking amazing.
@@ -729,12 +655,10 @@
       <div class="max-w-7xl mx-auto px-6">
         <div class="text-center mb-16">
           <h2 class="text-5xl font-black mb-5">Happy Clients</h2>
-
           <p class="text-xl text-gray-600">
             Real dogs. Real grooming. Real happy tails.
           </p>
         </div>
-
         <div class="flex justify-center items-center">
           <div class="overflow-hidden rounded-3xl shadow-2xl max-w-4xl w-full">
             <img
@@ -756,37 +680,31 @@
           <h2 class="text-5xl font-black mb-8">
             Local Groomers Who Truly Love Dogs
           </h2>
-
           <p class="text-lg text-gray-700 leading-relaxed mb-6">
             At Chocolate Avenue Grooming Salon, we know pets are family. Our
             goal is to make every grooming session calm, safe, and stress-free
             while delivering professional results you'll love.
           </p>
-
           <p class="text-lg text-gray-700 leading-relaxed mb-10">
             Whether your dog needs a quick bath or a full grooming makeover, we
             provide patient, personalized care for dogs of all breeds and sizes.
           </p>
-
           <div class="grid grid-cols-2 gap-6">
             <div class="bg-amber-50 rounded-2xl p-6">
               <i class="fa-solid fa-heart text-red-500 text-3xl mb-4"></i>
               <h3 class="font-bold text-xl mb-2">Gentle Care</h3>
               <p class="text-gray-600">Comfort-focused grooming experience.</p>
             </div>
-
             <div class="bg-amber-50 rounded-2xl p-6">
               <i class="fa-solid fa-award text-amber-600 text-3xl mb-4"></i>
               <h3 class="font-bold text-xl mb-2">Professional</h3>
               <p class="text-gray-600">Experienced local groomers.</p>
             </div>
-
             <div class="bg-amber-50 rounded-2xl p-6">
               <i class="fa-solid fa-soap text-blue-500 text-3xl mb-4"></i>
               <h3 class="font-bold text-xl mb-2">Clean & Safe</h3>
               <p class="text-gray-600">Sanitized grooming stations.</p>
             </div>
-
             <div class="bg-amber-50 rounded-2xl p-6">
               <i
                 class="fa-solid fa-location-dot text-green-600 text-3xl mb-4"
@@ -796,37 +714,31 @@
             </div>
           </div>
         </div>
-
         <div>
           <div
             class="bg-gradient-to-br from-amber-600 to-amber-800 rounded-[40px] p-10 text-white shadow-2xl"
           >
             <h3 class="text-4xl font-black mb-8">Why Pet Owners Choose Us</h3>
-
             <div class="space-y-6 text-lg">
               <div class="flex gap-4">
                 <i class="fa-solid fa-check mt-1 text-green-300"></i>
                 Personalized attention for every dog
               </div>
-
               <div class="flex gap-4">
                 <i class="fa-solid fa-check mt-1 text-green-300"></i>
                 Stress-free grooming environment
               </div>
-
               <div class="flex gap-4">
-                <i class="fa-solid fa-check mt-1 text-green-300"></i>
-                Friendly and experienced team
+                <i class="fa-solid fa-check mt-1 text-green-300"></i> Friendly
+                and experienced team
               </div>
-
               <div class="flex gap-4">
-                <i class="fa-solid fa-check mt-1 text-green-300"></i>
-                Locally owned and operated
+                <i class="fa-solid fa-check mt-1 text-green-300"></i> Locally
+                owned and operated
               </div>
-
               <div class="flex gap-4">
-                <i class="fa-solid fa-check mt-1 text-green-300"></i>
-                Convenient appointment scheduling
+                <i class="fa-solid fa-check mt-1 text-green-300"></i> Convenient
+                appointment scheduling
               </div>
             </div>
           </div>
@@ -839,41 +751,32 @@
       <div class="max-w-7xl mx-auto px-6">
         <div class="text-center mb-16">
           <h2 class="text-5xl font-black mb-5">What Pet Parents Say</h2>
-
           <div class="flex justify-center text-yellow-400 text-2xl gap-2 mb-4">
-            <i class="fa-solid fa-star"></i>
-            <i class="fa-solid fa-star"></i>
-            <i class="fa-solid fa-star"></i>
-            <i class="fa-solid fa-star"></i>
+            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
             <i class="fa-solid fa-star"></i>
           </div>
         </div>
-
         <div class="grid md:grid-cols-3 gap-8">
           <div class="bg-white p-10 rounded-3xl shadow-md">
             <p class="italic text-lg text-gray-700 leading-relaxed">
               "They always take such amazing care of our dog. He comes home
               clean, happy, and looking adorable every time."
             </p>
-
             <div class="mt-8 font-bold text-amber-700">— Hershey Customer</div>
           </div>
-
           <div class="bg-white p-10 rounded-3xl shadow-md">
             <p class="italic text-lg text-gray-700 leading-relaxed">
               "Professional grooming and genuinely caring staff. Highly
               recommend for nervous or anxious dogs."
             </p>
-
             <div class="mt-8 font-bold text-amber-700">— Local Pet Parent</div>
           </div>
-
           <div class="bg-white p-10 rounded-3xl shadow-md">
             <p class="italic text-lg text-gray-700 leading-relaxed">
               "Best grooming salon around Hershey. Friendly service and
               beautiful grooming results every visit."
             </p>
-
             <div class="mt-8 font-bold text-amber-700">— Happy Client</div>
           </div>
         </div>
@@ -885,12 +788,10 @@
       <div class="max-w-7xl mx-auto px-6">
         <div class="text-center mb-16">
           <h2 class="text-5xl font-black mb-5">Request a Grooming Session</h2>
-
           <p class="text-xl text-gray-600">
             Call, text, or send us a request below.
           </p>
         </div>
-
         <div class="grid md:grid-cols-2 gap-12">
           <div>
             <div class="bg-amber-50 rounded-3xl p-10 shadow-sm">
@@ -899,53 +800,42 @@
                   <div class="text-amber-600 text-3xl">
                     <i class="fa-solid fa-location-dot"></i>
                   </div>
-
                   <div>
                     <h3 class="font-bold text-2xl mb-2">Address</h3>
                     <p class="text-lg text-gray-700">
-                      1514 East Chocolate Avenue<br />
-                      Hershey, PA 17033
+                      1514 East Chocolate Avenue<br />Hershey, PA 17033
                     </p>
                   </div>
                 </div>
-
                 <div class="flex gap-5">
                   <div class="text-amber-600 text-3xl">
                     <i class="fa-solid fa-phone"></i>
                   </div>
-
                   <div>
                     <h3 class="font-bold text-2xl mb-2">Phone</h3>
                     <a
                       href="tel:7174333714"
                       class="text-lg text-gray-700 hover:text-amber-600"
+                      >(717) 433-3714</a
                     >
-                      (717) 433-3714
-                    </a>
                   </div>
                 </div>
-
                 <div class="flex gap-5">
                   <div class="text-blue-600 text-3xl">
                     <i class="fa-brands fa-facebook"></i>
                   </div>
-
                   <div>
                     <h3 class="font-bold text-2xl mb-2">Facebook</h3>
-
                     <a
                       href="https://www.facebook.com/ChocolateAvenueGroomingSalon/"
                       target="_blank"
-                      aria-label="Facebook"
                       class="text-lg text-blue-600 hover:underline"
+                      >Follow us on Facebook</a
                     >
-                      Follow us on Facebook
-                    </a>
                   </div>
                 </div>
               </div>
             </div>
-
             <div class="mt-8 overflow-hidden rounded-3xl shadow-xl">
               <iframe
                 src="https://www.google.com/maps?q=Chocolate+Avenue+Grooming+Salon+Hershey+PA&output=embed"
@@ -972,7 +862,6 @@
                 class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:border-amber-600"
               />
             </div>
-
             <div>
               <label class="block font-semibold mb-3">Email</label>
               <input
@@ -982,7 +871,6 @@
                 class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:border-amber-600"
               />
             </div>
-
             <div>
               <label class="block font-semibold mb-3">Phone Number</label>
               <input
@@ -992,9 +880,10 @@
                 class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:border-amber-600"
               />
             </div>
-
             <div>
-              <label class="block font-semibold mb-3">Appointment Date</label>
+              <label class="block font-semibold mb-3"
+                >Appointment Date & Time</label
+              >
               <button
                 type="button"
                 id="openCalendarBtn"
@@ -1011,7 +900,6 @@
               <input type="hidden" name="date" id="selectedDateInput" />
               <input type="hidden" name="time" id="selectedTimeInput" />
             </div>
-
             <div>
               <label class="block font-semibold mb-3"
                 >Tell Us About Your Dog</label
@@ -1024,7 +912,6 @@
                 class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:border-amber-600"
               ></textarea>
             </div>
-
             <button
               type="submit"
               id="submitBtn"
@@ -1032,7 +919,6 @@
             >
               Request Appointment
             </button>
-
             <p id="formMsg" class="text-center font-semibold hidden"></p>
           </form>
         </div>
@@ -1049,15 +935,12 @@
             <i class="fa-solid fa-paw"></i>
           </div>
         </div>
-
         <h3 class="text-3xl font-black text-white mb-4">
           Chocolate Avenue Grooming Salon
         </h3>
-
         <p class="text-lg mb-8">
           Professional Dog Grooming in Hershey, Pennsylvania
         </p>
-
         <div class="flex justify-center gap-8 mb-10 text-3xl">
           <a
             href="https://www.facebook.com/ChocolateAvenueGroomingSalon/"
@@ -1067,7 +950,6 @@
           >
             <i class="fa-brands fa-facebook"></i>
           </a>
-
           <a
             href="tel:7174333714"
             aria-label="Phone"
@@ -1076,7 +958,6 @@
             <i class="fa-solid fa-phone"></i>
           </a>
         </div>
-
         <div class="text-sm border-t border-gray-800 pt-8">
           © 2026 Chocolate Avenue Grooming Salon • All Rights Reserved
         </div>
@@ -1111,9 +992,7 @@
               >
                 Prev
               </button>
-
               <h3 id="monthLabel" class="text-2xl md:text-3xl font-black"></h3>
-
               <button
                 id="nextMonth"
                 type="button"
@@ -1122,7 +1001,6 @@
                 Next
               </button>
             </div>
-
             <div class="grid grid-cols-7 gap-2 mb-3 text-center">
               <div class="text-xs font-bold text-gray-500 py-2">S</div>
               <div class="text-xs font-bold text-gray-500 py-2">M</div>
@@ -1132,7 +1010,6 @@
               <div class="text-xs font-bold text-gray-500 py-2">F</div>
               <div class="text-xs font-bold text-gray-500 py-2">S</div>
             </div>
-
             <div
               id="calendarGrid"
               class="grid grid-cols-7 gap-2 text-center"
@@ -1147,7 +1024,6 @@
                   No date selected
                 </p>
               </div>
-
               <button
                 id="closeCalendar"
                 type="button"
@@ -1157,7 +1033,6 @@
                 <i class="fa-solid fa-xmark"></i>
               </button>
             </div>
-
             <div class="bg-white rounded-3xl p-5 shadow-sm mb-5">
               <div class="text-sm font-semibold text-gray-500 mb-2">
                 Open Hours
@@ -1166,7 +1041,6 @@
                 Tue – Sat · 9:00 AM – 7:00 PM
               </div>
             </div>
-
             <div id="timePanel" class="hidden">
               <h5 class="font-black text-lg mb-2">Choose a Time</h5>
               <p id="timeNotice" class="text-sm text-gray-600 mb-4"></p>
@@ -1175,7 +1049,6 @@
                 Strikethrough times are already booked.
               </p>
             </div>
-
             <button
               type="button"
               id="closeCalendarBottom"

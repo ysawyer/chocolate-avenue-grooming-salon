@@ -9,6 +9,7 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
     />
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <style>
       .glass {
         backdrop-filter: blur(16px);
@@ -92,6 +93,12 @@
           </div>
           <div class="flex items-center gap-3">
             <button
+              id="addAppointmentBtn"
+              class="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold transition flex items-center gap-2"
+            >
+              <i class="fa-solid fa-plus"></i> Add Appointment
+            </button>
+            <button
               id="logoutBtn"
               class="px-5 py-2.5 rounded-xl bg-gray-100 hover:bg-red-50 hover:text-red-600 font-bold transition"
             >
@@ -162,15 +169,137 @@
           </select>
         </div>
 
-        <!-- BOOKING LIST GRID -->
+        <!-- BOOKING LIST -->
         <div
           id="bookingList"
           class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-        >
-          <!-- Rendered via JS -->
-        </div>
+        ></div>
       </main>
     </section>
+
+    <!-- ADD APPOINTMENT MODAL -->
+    <div
+      id="addModal"
+      class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+    >
+      <div
+        class="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+      >
+        <div class="p-8">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-black text-gray-900">
+              Add New Appointment
+            </h2>
+            <button
+              id="closeAddModal"
+              class="text-gray-400 hover:text-gray-700 text-2xl"
+            >
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+          <form id="addAppointmentForm" class="space-y-4">
+            <div>
+              <label class="block font-semibold mb-2 text-sm"
+                >Customer Name</label
+              >
+              <input
+                type="text"
+                name="name"
+                required
+                class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none"
+              />
+            </div>
+            <div>
+              <label class="block font-semibold mb-2 text-sm">Email</label>
+              <input
+                type="email"
+                name="email"
+                required
+                class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none"
+              />
+            </div>
+            <div>
+              <label class="block font-semibold mb-2 text-sm">Phone</label>
+              <input
+                type="tel"
+                name="phone"
+                required
+                class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none"
+              />
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block font-semibold mb-2 text-sm">Date</label>
+                <input
+                  type="date"
+                  name="date"
+                  required
+                  class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none"
+                />
+              </div>
+              <div>
+                <label class="block font-semibold mb-2 text-sm">Time</label>
+                <select
+                  name="time"
+                  required
+                  class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none bg-white"
+                >
+                  <option value="">Select time</option>
+                  <option value="09:00">9:00 AM</option>
+                  <option value="10:00">10:00 AM</option>
+                  <option value="11:00">11:00 AM</option>
+                  <option value="12:00">12:00 PM</option>
+                  <option value="13:00">1:00 PM</option>
+                  <option value="14:00">2:00 PM</option>
+                  <option value="15:00">3:00 PM</option>
+                  <option value="16:00">4:00 PM</option>
+                  <option value="17:00">5:00 PM</option>
+                  <option value="18:00">6:00 PM</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="block font-semibold mb-2 text-sm">Status</label>
+              <select
+                name="status"
+                class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none bg-white"
+              >
+                <option value="pending">Pending</option>
+                <option value="approved">Approved (auto-blocks slot)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-semibold mb-2 text-sm"
+                >Notes / Dog Info</label
+              >
+              <textarea
+                name="message"
+                rows="3"
+                placeholder="Breed, grooming notes, etc."
+                class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none resize-none"
+              ></textarea>
+            </div>
+            <div class="pt-2 flex gap-3">
+              <button
+                type="submit"
+                id="addSubmitBtn"
+                class="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-2xl font-bold transition"
+              >
+                Add Appointment
+              </button>
+              <button
+                type="button"
+                id="cancelAddModal"
+                class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-2xl font-bold transition"
+              >
+                Cancel
+              </button>
+            </div>
+            <p id="addMsg" class="text-center text-sm font-medium hidden"></p>
+          </form>
+        </div>
+      </div>
+    </div>
 
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
@@ -188,6 +317,7 @@
         deleteDoc,
         doc,
         setDoc,
+        addDoc,
         deleteDoc as firestoreDeleteDoc,
       } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
@@ -203,6 +333,8 @@
       const app = initializeApp(firebaseConfig);
       const auth = getAuth(app);
       const db = getFirestore(app);
+      emailjs.init("KmW8d6wt0pthfowkY");
+
       const state = { bookings: [], filter: "all", search: "" };
 
       // --- HELPERS ---
@@ -219,6 +351,15 @@
               day: "numeric",
             })
           : "N/A";
+      const prettyDate = (d) =>
+        d
+          ? new Date(d.replace(/-/g, "/")).toLocaleDateString("en-US", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })
+          : "N/A";
       const getBadgeClass = (s) => {
         if (s === "approved")
           return "bg-green-100 text-green-700 border-green-200";
@@ -226,35 +367,53 @@
         return "bg-amber-100 text-amber-700 border-amber-200";
       };
 
-      // --- AVAILABILITY HELPERS ---
-      // Creates a unique doc ID from date + time, e.g. "2024-06-15_14:00"
-      const availabilityDocId = (date, time) => `${date}_${time}`;
+      // --- AVAILABILITY ---
+      const availId = (date, time) => `${date}_${time}`;
 
-      // Blocks a time slot in the `availability` collection
       async function blockTimeSlot(booking) {
-        const slotId = availabilityDocId(booking.date, booking.time);
+        const slotId = availId(booking.date, booking.time);
         await setDoc(doc(db, "availability", slotId), {
           date: booking.date,
           time: booking.time,
           bookedBy: booking.name || "Unknown",
           bookedEmail: booking.email || "",
-          appointmentId: booking.id,
+          appointmentId: booking.id || "",
           blocked: true,
           blockedAt: new Date().toISOString(),
         });
       }
 
-      // Removes the block from the `availability` collection (for reset/reject)
       async function unblockTimeSlot(booking) {
-        const slotId = availabilityDocId(booking.date, booking.time);
+        const slotId = availId(booking.date, booking.time);
         try {
           await firestoreDeleteDoc(doc(db, "availability", slotId));
         } catch (err) {
-          console.warn("Could not unblock slot (may not exist):", err.message);
+          console.warn("Could not unblock slot:", err.message);
         }
       }
 
-      // --- ACTIONS ---
+      // --- SEND APPROVAL EMAIL via EmailJS ---
+      // Uses template ID: template_approval  (you'll create this in EmailJS — see below)
+      async function sendApprovalEmail(booking) {
+        try {
+          await emailjs.send("service_xfesk05", "template_ht3z1vd", {
+            to_name: booking.name,
+            to_email: booking.email,
+            phone: booking.phone || "N/A",
+            dog_info: booking.message || "N/A",
+            appt_date: prettyDate(booking.date),
+            appt_time: fmtTime(booking.time),
+          });
+          console.log("Approval email sent to", booking.email);
+        } catch (err) {
+          console.warn(
+            "Approval email failed (booking still approved):",
+            err.message,
+          );
+        }
+      }
+
+      // --- BOOKING LIST ACTIONS ---
       document
         .getElementById("bookingList")
         .addEventListener("click", async (e) => {
@@ -270,33 +429,90 @@
 
             if (action === "delete") {
               if (confirm("Permanently delete this record?")) {
-                // Also unblock the slot if it was approved
-                if (booking && booking.status === "approved")
+                if (booking?.status === "approved")
                   await unblockTimeSlot(booking);
                 await deleteDoc(docRef);
               } else {
-                // Re-render to restore button
                 updateUI();
               }
             } else if (action === "approve") {
-              // 1. Update appointment status
               await updateDoc(docRef, { status: "approved" });
-              // 2. Block the time slot in availability
-              if (booking) await blockTimeSlot(booking);
+              if (booking) {
+                await blockTimeSlot(booking);
+                await sendApprovalEmail(booking);
+              }
             } else if (action === "reject") {
-              // Unblock if it was previously approved
-              if (booking && booking.status === "approved")
+              if (booking?.status === "approved")
                 await unblockTimeSlot(booking);
               await updateDoc(docRef, { status: "rejected" });
             } else if (action === "pending") {
-              // Unblock if resetting from approved
-              if (booking && booking.status === "approved")
+              if (booking?.status === "approved")
                 await unblockTimeSlot(booking);
               await updateDoc(docRef, { status: "pending" });
             }
           } catch (err) {
             alert("Error: " + err.message);
             updateUI();
+          }
+        });
+
+      // --- ADD APPOINTMENT MODAL ---
+      const addModal = document.getElementById("addModal");
+      document.getElementById("addAppointmentBtn").onclick = () =>
+        addModal.classList.remove("hidden");
+      document.getElementById("closeAddModal").onclick = () =>
+        addModal.classList.add("hidden");
+      document.getElementById("cancelAddModal").onclick = () =>
+        addModal.classList.add("hidden");
+      addModal.addEventListener("click", (e) => {
+        if (e.target === addModal) addModal.classList.add("hidden");
+      });
+
+      document
+        .getElementById("addAppointmentForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const form = e.target;
+          const btn = document.getElementById("addSubmitBtn");
+          const msg = document.getElementById("addMsg");
+          const data = Object.fromEntries(new FormData(form));
+
+          btn.textContent = "Saving...";
+          btn.disabled = true;
+
+          try {
+            const docRef = await addDoc(collection(db, "appointments"), {
+              name: data.name,
+              email: data.email,
+              phone: data.phone,
+              message: data.message || "",
+              date: data.date,
+              time: data.time,
+              status: data.status,
+            });
+
+            // If admin is adding as approved, block the slot right away and send email
+            if (data.status === "approved") {
+              const booking = { id: docRef.id, ...data };
+              await blockTimeSlot(booking);
+              await sendApprovalEmail(booking);
+            }
+
+            msg.textContent = "✅ Appointment added!";
+            msg.classList.remove("hidden", "text-red-600");
+            msg.classList.add("text-green-600");
+            form.reset();
+            setTimeout(() => {
+              msg.classList.add("hidden");
+              addModal.classList.add("hidden");
+            }, 1500);
+          } catch (err) {
+            msg.textContent = "❌ Error: " + err.message;
+            msg.classList.remove("hidden", "text-green-600");
+            msg.classList.add("text-red-600");
+          } finally {
+            btn.textContent = "Add Appointment";
+            btn.disabled = false;
           }
         });
 
@@ -317,7 +533,7 @@
 
       document.getElementById("logoutBtn").onclick = () => signOut(auth);
 
-      // --- FILTERING & RENDERING ---
+      // --- RENDERING ---
       function updateUI() {
         const rows = state.bookings.filter((b) => {
           const matchStatus =
@@ -347,20 +563,15 @@
                 <div>
                   <h3 class="text-xl font-black text-gray-900">${b.name || "Anonymous"}</h3>
                   <p class="text-sm text-gray-500 font-medium">${b.email || ""}</p>
+                  ${b.phone ? `<p class="text-sm text-gray-400">${b.phone}</p>` : ""}
                 </div>
                 <span class="px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest ${getBadgeClass(b.status || "pending")}">
                   ${b.status || "pending"}
                 </span>
               </div>
               <div class="grid grid-cols-2 gap-3 mb-5">
-                <div class="bg-gray-50 p-3 rounded-2xl">
-                  <p class="text-[10px] font-bold text-gray-400 uppercase">Date</p>
-                  <p class="font-bold text-sm">${fmtDate(b.date)}</p>
-                </div>
-                <div class="bg-gray-50 p-3 rounded-2xl">
-                  <p class="text-[10px] font-bold text-gray-400 uppercase">Time</p>
-                  <p class="font-bold text-sm">${fmtTime(b.time)}</p>
-                </div>
+                <div class="bg-gray-50 p-3 rounded-2xl"><p class="text-[10px] font-bold text-gray-400 uppercase">Date</p><p class="font-bold text-sm">${fmtDate(b.date)}</p></div>
+                <div class="bg-gray-50 p-3 rounded-2xl"><p class="text-[10px] font-bold text-gray-400 uppercase">Time</p><p class="font-bold text-sm">${fmtTime(b.time)}</p></div>
               </div>
               <p class="text-sm text-gray-600 italic bg-amber-50/50 p-3 rounded-xl border border-amber-100/50 mb-6 flex-grow">
                 "${b.message || "No message provided."}"
@@ -378,7 +589,6 @@
           '<div class="col-span-full text-center py-20 text-gray-400 font-medium">No records found.</div>';
       }
 
-      // --- SEARCH/FILTER EVENTS ---
       document.getElementById("searchInput").oninput = (e) => {
         state.search = e.target.value;
         updateUI();
@@ -388,7 +598,7 @@
         updateUI();
       };
 
-      // --- AUTH OBSERVER ---
+      // --- AUTH ---
       onAuthStateChanged(auth, (user) => {
         if (user) {
           document.getElementById("loginView").classList.add("hidden");

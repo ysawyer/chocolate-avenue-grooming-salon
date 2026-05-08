@@ -187,6 +187,8 @@
         updateDoc,
         deleteDoc,
         doc,
+        setDoc,
+        deleteDoc as firestoreDeleteDoc,
       } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
       const firebaseConfig = {
@@ -201,7 +203,6 @@
       const app = initializeApp(firebaseConfig);
       const auth = getAuth(app);
       const db = getFirestore(app);
-
       const state = { bookings: [], filter: "all", search: "" };
 
       // --- HELPERS ---
@@ -210,7 +211,6 @@
         const [h, m] = t.split(":").map(Number);
         return `${h % 12 || 12}:${m.toString().padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
       };
-
       const fmtDate = (d) =>
         d
           ? new Date(d.replace(/-/g, "/")).toLocaleDateString("en-US", {
@@ -219,7 +219,6 @@
               day: "numeric",
             })
           : "N/A";
-
       const getBadgeClass = (s) => {
         if (s === "approved")
           return "bg-green-100 text-green-700 border-green-200";
@@ -227,35 +226,77 @@
         return "bg-amber-100 text-amber-700 border-amber-200";
       };
 
-      // --- ACTIONS (FIXED DELETE HERE) ---
+      // --- AVAILABILITY HELPERS ---
+      // Creates a unique doc ID from date + time, e.g. "2024-06-15_14:00"
+      const availabilityDocId = (date, time) => `${date}_${time}`;
+
+      // Blocks a time slot in the `availability` collection
+      async function blockTimeSlot(booking) {
+        const slotId = availabilityDocId(booking.date, booking.time);
+        await setDoc(doc(db, "availability", slotId), {
+          date: booking.date,
+          time: booking.time,
+          bookedBy: booking.name || "Unknown",
+          bookedEmail: booking.email || "",
+          appointmentId: booking.id,
+          blocked: true,
+          blockedAt: new Date().toISOString(),
+        });
+      }
+
+      // Removes the block from the `availability` collection (for reset/reject)
+      async function unblockTimeSlot(booking) {
+        const slotId = availabilityDocId(booking.date, booking.time);
+        try {
+          await firestoreDeleteDoc(doc(db, "availability", slotId));
+        } catch (err) {
+          console.warn("Could not unblock slot (may not exist):", err.message);
+        }
+      }
+
+      // --- ACTIONS ---
       document
         .getElementById("bookingList")
         .addEventListener("click", async (e) => {
           const btn = e.target.closest("button[data-id]");
           if (!btn) return;
-
           const { id, action } = btn.dataset;
-          const docRef = doc(db, "appointments", id); // MATCHES RULES
+          const docRef = doc(db, "appointments", id);
+          const booking = state.bookings.find((b) => b.id === id);
 
           try {
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
 
             if (action === "delete") {
-              if (confirm("Permanently delete this record?"))
+              if (confirm("Permanently delete this record?")) {
+                // Also unblock the slot if it was approved
+                if (booking && booking.status === "approved")
+                  await unblockTimeSlot(booking);
                 await deleteDoc(docRef);
-            } else {
-              await updateDoc(docRef, {
-                status:
-                  action === "approve"
-                    ? "approved"
-                    : action === "reject"
-                      ? "rejected"
-                      : "pending",
-              });
+              } else {
+                // Re-render to restore button
+                updateUI();
+              }
+            } else if (action === "approve") {
+              // 1. Update appointment status
+              await updateDoc(docRef, { status: "approved" });
+              // 2. Block the time slot in availability
+              if (booking) await blockTimeSlot(booking);
+            } else if (action === "reject") {
+              // Unblock if it was previously approved
+              if (booking && booking.status === "approved")
+                await unblockTimeSlot(booking);
+              await updateDoc(docRef, { status: "rejected" });
+            } else if (action === "pending") {
+              // Unblock if resetting from approved
+              if (booking && booking.status === "approved")
+                await unblockTimeSlot(booking);
+              await updateDoc(docRef, { status: "pending" });
             }
           } catch (err) {
             alert("Error: " + err.message);
+            updateUI();
           }
         });
 
@@ -301,40 +342,37 @@
           rows
             .map(
               (b) => `
-          <article class="booking-card bg-white border border-gray-100 rounded-[2rem] shadow-sm p-6 flex flex-col">
-            <div class="flex justify-between items-start mb-4">
-              <div>
-                <h3 class="text-xl font-black text-gray-900">${b.name || "Anonymous"}</h3>
-                <p class="text-sm text-gray-500 font-medium">${b.email || ""}</p>
+            <article class="booking-card bg-white border border-gray-100 rounded-[2rem] shadow-sm p-6 flex flex-col">
+              <div class="flex justify-between items-start mb-4">
+                <div>
+                  <h3 class="text-xl font-black text-gray-900">${b.name || "Anonymous"}</h3>
+                  <p class="text-sm text-gray-500 font-medium">${b.email || ""}</p>
+                </div>
+                <span class="px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest ${getBadgeClass(b.status || "pending")}">
+                  ${b.status || "pending"}
+                </span>
               </div>
-              <span class="px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest ${getBadgeClass(b.status || "pending")}">
-                ${b.status || "pending"}
-              </span>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-3 mb-5">
-              <div class="bg-gray-50 p-3 rounded-2xl">
-                <p class="text-[10px] font-bold text-gray-400 uppercase">Date</p>
-                <p class="font-bold text-sm">${fmtDate(b.date)}</p>
+              <div class="grid grid-cols-2 gap-3 mb-5">
+                <div class="bg-gray-50 p-3 rounded-2xl">
+                  <p class="text-[10px] font-bold text-gray-400 uppercase">Date</p>
+                  <p class="font-bold text-sm">${fmtDate(b.date)}</p>
+                </div>
+                <div class="bg-gray-50 p-3 rounded-2xl">
+                  <p class="text-[10px] font-bold text-gray-400 uppercase">Time</p>
+                  <p class="font-bold text-sm">${fmtTime(b.time)}</p>
+                </div>
               </div>
-              <div class="bg-gray-50 p-3 rounded-2xl">
-                <p class="text-[10px] font-bold text-gray-400 uppercase">Time</p>
-                <p class="font-bold text-sm">${fmtTime(b.time)}</p>
+              <p class="text-sm text-gray-600 italic bg-amber-50/50 p-3 rounded-xl border border-amber-100/50 mb-6 flex-grow">
+                "${b.message || "No message provided."}"
+              </p>
+              <div class="flex gap-2">
+                ${b.status !== "approved" ? `<button data-action="approve" data-id="${b.id}" class="flex-1 bg-green-600 text-white py-3 rounded-xl text-xs font-bold hover:bg-green-700 transition">Approve</button>` : ""}
+                ${b.status !== "rejected" ? `<button data-action="reject" data-id="${b.id}" class="flex-1 bg-red-600 text-white py-3 rounded-xl text-xs font-bold hover:bg-red-700 transition">Reject</button>` : ""}
+                ${b.status === "approved" || b.status === "rejected" ? `<button data-action="pending" data-id="${b.id}" class="flex-1 bg-amber-500 text-white py-3 rounded-xl text-xs font-bold hover:bg-amber-600 transition">Reset</button>` : ""}
+                <button data-action="delete" data-id="${b.id}" class="w-12 bg-gray-900 text-white py-3 rounded-xl hover:bg-black transition"><i class="fa-solid fa-trash-can"></i></button>
               </div>
-            </div>
-
-            <p class="text-sm text-gray-600 italic bg-amber-50/50 p-3 rounded-xl border border-amber-100/50 mb-6 flex-grow">
-              "${b.message || "No message provided."}"
-            </p>
-
-            <div class="flex gap-2">
-              ${b.status !== "approved" ? `<button data-action="approve" data-id="${b.id}" class="flex-1 bg-green-600 text-white py-3 rounded-xl text-xs font-bold hover:bg-green-700 transition">Approve</button>` : ""}
-              ${b.status !== "rejected" ? `<button data-action="reject" data-id="${b.id}" class="flex-1 bg-red-600 text-white py-3 rounded-xl text-xs font-bold hover:bg-red-700 transition">Reject</button>` : ""}
-              ${b.status === "approved" || b.status === "rejected" ? `<button data-action="pending" data-id="${b.id}" class="flex-1 bg-amber-500 text-white py-3 rounded-xl text-xs font-bold hover:bg-amber-600 transition">Reset</button>` : ""}
-              <button data-action="delete" data-id="${b.id}" class="w-12 bg-gray-900 text-white py-3 rounded-xl hover:bg-black transition"><i class="fa-solid fa-trash-can"></i></button>
-            </div>
-          </article>
-        `,
+            </article>
+          `,
             )
             .join("") ||
           '<div class="col-span-full text-center py-20 text-gray-400 font-medium">No records found.</div>';
@@ -357,7 +395,6 @@
           document.getElementById("dashboardView").classList.remove("hidden");
           document.getElementById("adminEmailLabel").textContent = user.email;
 
-          // REAL-TIME SYNC
           onSnapshot(
             collection(db, "appointments"),
             (snap) => {

@@ -27,9 +27,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-
     <style>
       body {
         background: #fffaf5;
@@ -86,6 +83,446 @@
   </head>
 
   <body class="font-sans text-gray-800">
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+      import {
+        getFirestore,
+        collection,
+        getDocs,
+        addDoc,
+        doc,
+        getDoc,
+        query,
+        where,
+      } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyDGboX-vIjRHG8c1WH96-ggXFTp6MwVFCk",
+        authDomain: "chocolate-avenue-grooming.firebaseapp.com",
+        projectId: "chocolate-avenue-grooming",
+        storageBucket: "chocolate-avenue-grooming.firebasestorage.app",
+        messagingSenderId: "598219200758",
+        appId: "1:598219200758:web:715700a519b5ace9aff4d7",
+        measurementId: "G-84ZJ0BB040",
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+
+      emailjs.init("KmW8d6wt0pthfowkY");
+
+      window.addEventListener("DOMContentLoaded", () => {
+        let currentDate = new Date();
+        let selectedDate = "";
+        let selectedTime = "";
+        let blockedDates = new Set();
+
+        // Cache of booked times per date: { "2026-05-10": Set(["09:00", "11:00"]) }
+        let bookedTimesByDate = {};
+
+        const openDays = new Set([2, 3, 4, 5, 6]); // Tue-Sat
+        const timeSlots = [
+          "09:00",
+          "10:00",
+          "11:00",
+          "12:00",
+          "13:00",
+          "14:00",
+          "15:00",
+          "16:00",
+          "17:00",
+          "18:00",
+        ];
+
+        function pad(n) {
+          return String(n).padStart(2, "0");
+        }
+
+        function toDateString(date) {
+          return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+            date.getDate(),
+          )}`;
+        }
+
+        function toPrettyDate(dateStr) {
+          if (!dateStr) return "No date selected";
+          const [y, m, d] = dateStr.split("-").map(Number);
+          const date = new Date(y, m - 1, d);
+          return date.toLocaleDateString(undefined, {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
+        }
+
+        function toPrettyTime(timeStr) {
+          if (!timeStr) return "No time selected";
+          const [h, m] = timeStr.split(":").map(Number);
+          const suffix = h >= 12 ? "PM" : "AM";
+          const hour = h % 12 === 0 ? 12 : h % 12;
+          return `${hour}:${String(m).padStart(2, "0")} ${suffix}`;
+        }
+
+        function isPastDate(dateObj) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const check = new Date(dateObj);
+          check.setHours(0, 0, 0, 0);
+          return check < today;
+        }
+
+        async function loadBlockedDates() {
+          blockedDates = new Set();
+
+          try {
+            const snap = await getDocs(collection(db, "availability"));
+            snap.forEach((d) => {
+              const data = d.data();
+              if (data?.blocked === true && d.id) {
+                blockedDates.add(d.id);
+              }
+            });
+          } catch (error) {
+            console.warn("Could not load blocked dates yet.", error);
+          }
+        }
+
+        /**
+         * Load all approved appointments and build a map of date -> Set of booked times.
+         * We treat both "approved" and "pending" as taken so a slot can't be double-booked
+         * while an approval is in progress. Adjust the statuses array if you only want
+         * confirmed appointments to block.
+         */
+        async function loadBookedTimes() {
+          bookedTimesByDate = {};
+
+          try {
+            // Fetch all appointments that are approved (confirmed bookings block the slot)
+            const snap = await getDocs(collection(db, "appointments"));
+            snap.forEach((d) => {
+              const data = d.data();
+              // Block slots for approved appointments; remove "pending" from this list
+              // if you only want confirmed bookings to block.
+              const blockedStatuses = ["approved", "pending"];
+              if (
+                data?.date &&
+                data?.time &&
+                blockedStatuses.includes(data.status)
+              ) {
+                if (!bookedTimesByDate[data.date]) {
+                  bookedTimesByDate[data.date] = new Set();
+                }
+                bookedTimesByDate[data.date].add(data.time);
+              }
+            });
+          } catch (error) {
+            console.warn("Could not load booked times.", error);
+          }
+        }
+
+        function isTimeBooked(dateStr, time) {
+          return bookedTimesByDate[dateStr]?.has(time) ?? false;
+        }
+
+        function isBlocked(dateStr) {
+          return blockedDates.has(dateStr);
+        }
+
+        function renderCalendar() {
+          const grid = document.getElementById("calendarGrid");
+          const label = document.getElementById("monthLabel");
+          if (!grid || !label) return;
+
+          grid.innerHTML = "";
+
+          const year = currentDate.getFullYear();
+          const month = currentDate.getMonth();
+
+          label.textContent = currentDate.toLocaleString("default", {
+            month: "long",
+            year: "numeric",
+          });
+
+          const weekdays = ["S", "M", "T", "W", "T", "F", "S"];
+          weekdays.forEach((day) => {
+            const el = document.createElement("div");
+            el.className = "text-xs font-bold text-gray-500 py-2";
+            el.textContent = day;
+            grid.appendChild(el);
+          });
+
+          const firstDay = new Date(year, month, 1).getDay();
+          const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+          for (let i = 0; i < firstDay; i++) {
+            const blank = document.createElement("div");
+            blank.className = "h-12";
+            grid.appendChild(blank);
+          }
+
+          for (let day = 1; day <= daysInMonth; day++) {
+            const dateObj = new Date(year, month, day);
+            const dateStr = toDateString(dateObj);
+            const dayOfWeek = dateObj.getDay();
+            const closed = !openDays.has(dayOfWeek);
+            const past = isPastDate(dateObj);
+            const blocked = isBlocked(dateStr);
+            const selected = selectedDate === dateStr;
+
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className =
+              "h-12 rounded-2xl text-sm font-semibold transition border shadow-sm flex items-center justify-center " +
+              (past || closed
+                ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                : blocked
+                  ? "bg-red-200 text-red-900 border-red-300 cursor-not-allowed"
+                  : selected
+                    ? "bg-amber-600 text-white border-amber-600"
+                    : "bg-green-100 text-gray-800 border-green-200 hover:bg-green-200");
+
+            btn.textContent = String(day);
+
+            if (past || closed || blocked) {
+              btn.disabled = true;
+            } else {
+              btn.addEventListener("click", async () => {
+                selectedDate = dateStr;
+                selectedTime = "";
+                document.getElementById("selectedDateInput").value =
+                  selectedDate;
+                document.getElementById("selectedTimeInput").value = "";
+                document.getElementById("selectedDateText").textContent =
+                  toPrettyDate(selectedDate);
+                document.getElementById("selectedTimeText").textContent =
+                  "Select a time below";
+                document.getElementById("timePanel").classList.remove("hidden");
+                await renderTimeSlots(selectedDate);
+                renderCalendar();
+              });
+            }
+
+            btn.title = blocked
+              ? "Booked day"
+              : closed
+                ? "Closed"
+                : past
+                  ? "Past date"
+                  : "Available";
+
+            grid.appendChild(btn);
+          }
+        }
+
+        async function renderTimeSlots(dateStr) {
+          const timeGrid = document.getElementById("timeGrid");
+          const notice = document.getElementById("timeNotice");
+          if (!timeGrid || !notice) return;
+
+          timeGrid.innerHTML = "";
+
+          if (isBlocked(dateStr)) {
+            notice.textContent =
+              "This day is already booked and cannot be selected.";
+          } else {
+            notice.textContent = "Choose from the open hours below.";
+          }
+
+          timeSlots.forEach((time) => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.textContent = toPrettyTime(time);
+
+            const isDayBlocked = isBlocked(dateStr);
+            const isSlotBooked = isTimeBooked(dateStr, time);
+            const isChosen = selectedTime === time;
+            const unavailable = isDayBlocked || isSlotBooked;
+
+            if (unavailable) {
+              btn.disabled = true;
+              btn.className =
+                "px-3 py-3 rounded-2xl border text-sm font-semibold bg-red-100 text-red-400 border-red-200 cursor-not-allowed line-through";
+              btn.title = isDayBlocked ? "Booked day" : "Already booked";
+            } else {
+              btn.className =
+                "px-3 py-3 rounded-2xl border text-sm font-semibold transition " +
+                (isChosen
+                  ? "bg-amber-600 text-white border-amber-600"
+                  : "bg-white hover:bg-amber-100 border-amber-200");
+
+              btn.addEventListener("click", () => {
+                selectedTime = time;
+                document.getElementById("selectedTimeInput").value =
+                  selectedTime;
+                document.getElementById("selectedTimeText").textContent =
+                  `${toPrettyDate(selectedDate)} at ${toPrettyTime(selectedTime)}`;
+                renderTimeSlots(selectedDate);
+              });
+            }
+
+            timeGrid.appendChild(btn);
+          });
+        }
+
+        async function openCalendar() {
+          const modal = document.getElementById("calendarModal");
+          modal.classList.remove("hidden");
+          // Load both blocked days AND booked time slots
+          await Promise.all([loadBlockedDates(), loadBookedTimes()]);
+          renderCalendar();
+
+          if (selectedDate) {
+            document.getElementById("timePanel").classList.remove("hidden");
+            await renderTimeSlots(selectedDate);
+          }
+        }
+
+        const form = document.getElementById("groomingForm");
+        const openBtn = document.getElementById("openCalendarBtn");
+        const closeBtn = document.getElementById("closeCalendar");
+        const closeBottomBtn = document.getElementById("closeCalendarBottom");
+        const prevBtn = document.getElementById("prevMonth");
+        const nextBtn = document.getElementById("nextMonth");
+        const modal = document.getElementById("calendarModal");
+
+        openBtn.addEventListener("click", openCalendar);
+
+        closeBtn.addEventListener("click", () => {
+          modal.classList.add("hidden");
+        });
+
+        closeBottomBtn.addEventListener("click", () => {
+          modal.classList.add("hidden");
+        });
+
+        modal.addEventListener("click", (e) => {
+          if (e.target === modal) modal.classList.add("hidden");
+        });
+
+        prevBtn.addEventListener("click", async () => {
+          currentDate.setMonth(currentDate.getMonth() - 1);
+          await Promise.all([loadBlockedDates(), loadBookedTimes()]);
+          renderCalendar();
+          if (selectedDate) await renderTimeSlots(selectedDate);
+        });
+
+        nextBtn.addEventListener("click", async () => {
+          currentDate.setMonth(currentDate.getMonth() + 1);
+          await Promise.all([loadBlockedDates(), loadBookedTimes()]);
+          renderCalendar();
+          if (selectedDate) await renderTimeSlots(selectedDate);
+        });
+
+        form.addEventListener("submit", async function (e) {
+          e.preventDefault();
+
+          const btn = document.getElementById("submitBtn");
+          const msg = document.getElementById("formMsg");
+          const date = document.getElementById("selectedDateInput").value;
+          const time = document.getElementById("selectedTimeInput").value;
+
+          if (!date || !time) {
+            msg.textContent = "Please select a date and time first.";
+            msg.classList.remove("hidden", "text-green-600");
+            msg.classList.add("text-red-600");
+            return;
+          }
+
+          try {
+            // Re-fetch latest availability before submitting to prevent race conditions
+            await Promise.all([loadBlockedDates(), loadBookedTimes()]);
+
+            if (isBlocked(date)) {
+              msg.textContent = "That day is already booked.";
+              msg.classList.remove("hidden", "text-green-600");
+              msg.classList.add("text-red-600");
+              return;
+            }
+
+            if (isTimeBooked(date, time)) {
+              msg.textContent =
+                "That time slot was just booked by someone else. Please choose another time.";
+              msg.classList.remove("hidden", "text-green-600");
+              msg.classList.add("text-red-600");
+              // Refresh the time grid so they can see the updated availability
+              await renderTimeSlots(date);
+              return;
+            }
+
+            btn.textContent = "Sending...";
+            btn.disabled = true;
+
+            await addDoc(collection(db, "appointments"), {
+              name: this.name.value,
+              email: this.email.value,
+              phone: this.phone.value,
+              message: this.message.value,
+              date,
+              time,
+              status: "pending",
+            });
+
+            try {
+              await emailjs.send("service_xfesk05", "template_2ftwjch", {
+                name: this.name.value,
+                email: this.email.value,
+                phone: this.phone.value,
+                message: this.message.value,
+                date: toPrettyDate(date),
+                time: toPrettyTime(time),
+              });
+            } catch (emailError) {
+              console.warn("EmailJS failed but booking was saved.", emailError);
+            }
+
+            msg.textContent = "✅ Request sent! Waiting for approval.";
+            msg.classList.remove("hidden", "text-red-600");
+            msg.classList.add("text-green-600");
+            this.reset();
+
+            selectedDate = "";
+            selectedTime = "";
+            document.getElementById("selectedDateInput").value = "";
+            document.getElementById("selectedTimeInput").value = "";
+            document.getElementById("selectedDateText").textContent =
+              "No date selected";
+            document.getElementById("selectedTimeText").textContent =
+              "No time selected";
+
+            document.getElementById("timePanel").classList.add("hidden");
+            await Promise.all([loadBlockedDates(), loadBookedTimes()]);
+            renderCalendar();
+          } catch (error) {
+            console.error("Booking error:", error);
+            msg.textContent =
+              "❌ Something went wrong. Please call us at (717) 433-3714.";
+            msg.classList.remove("hidden", "text-green-600");
+            msg.classList.add("text-red-600");
+          } finally {
+            btn.textContent = "Request Appointment";
+            btn.disabled = false;
+          }
+        });
+
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) entry.target.classList.add("show");
+          });
+        });
+
+        document
+          .querySelectorAll(".fade-up")
+          .forEach((el) => observer.observe(el));
+
+        renderCalendar();
+        // Load both blocked dates AND booked times on initial render
+        Promise.all([loadBlockedDates(), loadBookedTimes()]).then(
+          renderCalendar,
+        );
+      });
+    </script>
+
     <!-- NAVBAR -->
     <nav class="bg-white/95 backdrop-blur-md shadow-md sticky top-0 z-50">
       <div
@@ -136,7 +573,6 @@
           alt="Group of dogs sitting together"
           class="w-full h-full object-cover"
         />
-
         <div class="absolute inset-0 hero-overlay"></div>
       </div>
 
@@ -203,7 +639,6 @@
         <div class="text-center mb-16">
           <h2 class="text-5xl font-black mb-5">Grooming Services</h2>
 
-          <!-- Hours Badge -->
           <div
             class="inline-flex flex-col sm:flex-row items-center gap-4 bg-amber-50 border border-amber-200 rounded-2xl px-8 py-5 mb-8 shadow-sm"
           >
@@ -524,7 +959,6 @@
             </div>
           </div>
 
-          <!-- CONTACT FORM — EmailJS -->
           <form
             id="groomingForm"
             class="bg-amber-50 rounded-3xl p-10 shadow-sm space-y-6"
@@ -557,6 +991,25 @@
                 required
                 class="w-full px-6 py-4 rounded-2xl border border-gray-200 focus:outline-none focus:border-amber-600"
               />
+            </div>
+
+            <div>
+              <label class="block font-semibold mb-3">Appointment Date</label>
+              <button
+                type="button"
+                id="openCalendarBtn"
+                class="w-full bg-white border border-amber-600 text-amber-700 py-4 rounded-2xl font-bold hover:bg-amber-50 transition"
+              >
+                Select Appointment Date & Time
+              </button>
+              <p
+                id="selectedTimeText"
+                class="mt-3 text-center font-semibold text-gray-700"
+              >
+                No time selected
+              </p>
+              <input type="hidden" name="date" id="selectedDateInput" />
+              <input type="hidden" name="time" id="selectedTimeInput" />
             </div>
 
             <div>
@@ -638,56 +1091,101 @@
       <i class="fa-solid fa-phone"></i>
     </a>
 
-    <script>
-      // ---- EmailJS Init ----
-      emailjs.init("KmW8d6wt0pthfowkY");
+    <!-- CALENDAR MODAL -->
+    <div
+      id="calendarModal"
+      class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 p-4 flex items-center justify-center"
+    >
+      <div
+        class="bg-white rounded-[32px] shadow-2xl w-full max-w-4xl overflow-hidden max-h-[90vh] overflow-y-auto"
+      >
+        <div class="grid md:grid-cols-[1.3fr_0.9fr]">
+          <div
+            class="p-6 md:p-8 border-b md:border-b-0 md:border-r border-amber-100"
+          >
+            <div class="flex items-center justify-between mb-6">
+              <button
+                id="prevMonth"
+                type="button"
+                class="px-4 py-3 bg-amber-600 text-white rounded-xl font-bold shadow-sm"
+              >
+                Prev
+              </button>
 
-      document
-        .getElementById("groomingForm")
-        .addEventListener("submit", function (e) {
-          e.preventDefault();
+              <h3 id="monthLabel" class="text-2xl md:text-3xl font-black"></h3>
 
-          const btn = document.getElementById("submitBtn");
-          const msg = document.getElementById("formMsg");
+              <button
+                id="nextMonth"
+                type="button"
+                class="px-4 py-3 bg-amber-600 text-white rounded-xl font-bold shadow-sm"
+              >
+                Next
+              </button>
+            </div>
 
-          btn.textContent = "Sending...";
-          btn.disabled = true;
+            <div class="grid grid-cols-7 gap-2 mb-3 text-center">
+              <div class="text-xs font-bold text-gray-500 py-2">S</div>
+              <div class="text-xs font-bold text-gray-500 py-2">M</div>
+              <div class="text-xs font-bold text-gray-500 py-2">T</div>
+              <div class="text-xs font-bold text-gray-500 py-2">W</div>
+              <div class="text-xs font-bold text-gray-500 py-2">T</div>
+              <div class="text-xs font-bold text-gray-500 py-2">F</div>
+              <div class="text-xs font-bold text-gray-500 py-2">S</div>
+            </div>
 
-          emailjs
-            .send("service_xfesk05", "template_2ftwjch", {
-              name: this.name.value,
-              email: this.email.value,
-              phone: this.phone.value,
-              message: this.message.value,
-            })
-            .then(() => {
-              msg.textContent = "✅ Request sent! We'll be in touch soon.";
-              msg.classList.remove("hidden", "text-red-600");
-              msg.classList.add("text-green-600");
-              this.reset();
-            })
-            .catch(() => {
-              msg.textContent =
-                "❌ Something went wrong. Please call us at (717) 433-3714.";
-              msg.classList.remove("hidden", "text-green-600");
-              msg.classList.add("text-red-600");
-            })
-            .finally(() => {
-              btn.textContent = "Request Appointment";
-              btn.disabled = false;
-            });
-        });
+            <div
+              id="calendarGrid"
+              class="grid grid-cols-7 gap-2 text-center"
+            ></div>
+          </div>
 
-      // ---- Scroll Animation ----
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) entry.target.classList.add("show");
-        });
-      });
+          <div class="p-6 md:p-8 bg-amber-50">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h4 class="text-xl font-black">Selected Booking</h4>
+                <p id="selectedDateText" class="text-gray-600 mt-1">
+                  No date selected
+                </p>
+              </div>
 
-      document
-        .querySelectorAll(".fade-up")
-        .forEach((el) => observer.observe(el));
-    </script>
+              <button
+                id="closeCalendar"
+                type="button"
+                class="text-gray-500 hover:text-gray-800 text-2xl"
+                aria-label="Close calendar"
+              >
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            <div class="bg-white rounded-3xl p-5 shadow-sm mb-5">
+              <div class="text-sm font-semibold text-gray-500 mb-2">
+                Open Hours
+              </div>
+              <div class="text-lg font-bold text-gray-800">
+                Tue – Sat · 9:00 AM – 7:00 PM
+              </div>
+            </div>
+
+            <div id="timePanel" class="hidden">
+              <h5 class="font-black text-lg mb-2">Choose a Time</h5>
+              <p id="timeNotice" class="text-sm text-gray-600 mb-4"></p>
+              <div id="timeGrid" class="grid grid-cols-2 gap-3"></div>
+              <p class="mt-4 text-sm text-gray-500">
+                Strikethrough times are already booked.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              id="closeCalendarBottom"
+              class="mt-6 w-full bg-white border border-gray-200 py-3 rounded-2xl font-semibold hover:bg-gray-100 transition"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

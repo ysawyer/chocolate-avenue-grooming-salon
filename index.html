@@ -3,35 +3,27 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
     <title>
       Chocolate Avenue Grooming Salon | Professional Dog Grooming in Hershey, PA
     </title>
-
     <meta
       name="description"
       content="Chocolate Avenue Grooming Salon provides professional dog grooming services in Hershey, PA. Baths, haircuts, nail trims, de-shedding, and loving care for all breeds."
     />
-
     <meta
       name="keywords"
       content="Dog Grooming Hershey PA, Hershey Pet Grooming, Dog Salon Hershey, Pet Spa Hershey, Chocolate Avenue Grooming"
     />
-
     <script src="https://cdn.tailwindcss.com"></script>
-
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
     />
-
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-
     <style>
       body {
         background: #fffaf5;
       }
-
       .hero-overlay {
         background: linear-gradient(
           to right,
@@ -39,35 +31,28 @@
           rgba(0, 0, 0, 0.45)
         );
       }
-
       .glass {
         backdrop-filter: blur(12px);
         background: rgba(255, 255, 255, 0.1);
       }
-
       .fade-up {
         opacity: 0;
         transform: translateY(40px);
         transition: all 0.8s ease;
       }
-
       .fade-up.show {
         opacity: 1;
         transform: translateY(0);
       }
-
       .gallery-img {
         transition: 0.4s;
       }
-
       .gallery-img:hover {
         transform: scale(1.03);
       }
-
       .floating-call {
         animation: pulse 2s infinite;
       }
-
       @keyframes pulse {
         0% {
           transform: scale(1);
@@ -81,7 +66,6 @@
       }
     </style>
   </head>
-
   <body class="font-sans text-gray-800">
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
@@ -104,19 +88,15 @@
 
       const app = initializeApp(firebaseConfig);
       const db = getFirestore(app);
-
       emailjs.init("KmW8d6wt0pthfowkY");
 
       window.addEventListener("DOMContentLoaded", () => {
         let currentDate = new Date();
         let selectedDate = "";
         let selectedTime = "";
-
-        // Set of "YYYY-MM-DD_HH:MM" strings that are blocked (approved by admin)
-        // This now matches exactly what the admin dashboard writes to /availability/
         let blockedSlots = new Set();
 
-        const openDays = new Set([2, 3, 4, 5, 6]); // Tue–Sat
+        const openDays = new Set([2, 3, 4, 5, 6]); // Tue-Sat
         const timeSlots = [
           "09:00",
           "10:00",
@@ -165,32 +145,33 @@
           return check < today;
         }
 
-        // Slot key matches exactly what admin writes: "YYYY-MM-DD_HH:MM"
+        // Returns true if a specific date+time slot is in the past (minute-level precision)
+        function isTimeInPast(dateStr, timeStr) {
+          const [y, mo, d] = dateStr.split("-").map(Number);
+          const [h, mi] = timeStr.split(":").map(Number);
+          return new Date(y, mo - 1, d, h, mi, 0) < new Date();
+        }
+
         function slotKey(date, time) {
           return `${date}_${time}`;
         }
-
         function isSlotBlocked(date, time) {
           return blockedSlots.has(slotKey(date, time));
         }
 
-        // Returns true if ALL time slots on a date are blocked (show day as fully booked)
-        function isDayFullyBooked(dateStr) {
-          return timeSlots.every((t) => blockedSlots.has(slotKey(dateStr, t)));
+        // Day is unavailable if every slot is either blocked or already past
+        function isDayFullyUnavailable(dateStr) {
+          return timeSlots.every(
+            (t) => isSlotBlocked(dateStr, t) || isTimeInPast(dateStr, t),
+          );
         }
 
-        /**
-         * Load blocked slots from the `availability` collection.
-         * Each doc ID is "YYYY-MM-DD_HH:MM" and has blocked: true when approved.
-         */
         async function loadBlockedSlots() {
           blockedSlots = new Set();
           try {
             const snap = await getDocs(collection(db, "availability"));
             snap.forEach((d) => {
-              if (d.data()?.blocked === true) {
-                blockedSlots.add(d.id); // e.g. "2026-05-09_09:00"
-              }
+              if (d.data()?.blocked === true) blockedSlots.add(d.id);
             });
           } catch (err) {
             console.warn("Could not load availability.", err);
@@ -201,19 +182,16 @@
           const grid = document.getElementById("calendarGrid");
           const label = document.getElementById("monthLabel");
           if (!grid || !label) return;
-
           grid.innerHTML = "";
 
           const year = currentDate.getFullYear();
           const month = currentDate.getMonth();
-
           label.textContent = currentDate.toLocaleString("default", {
             month: "long",
             year: "numeric",
           });
 
-          const weekdays = ["S", "M", "T", "W", "T", "F", "S"];
-          weekdays.forEach((day) => {
+          ["S", "M", "T", "W", "T", "F", "S"].forEach((day) => {
             const el = document.createElement("div");
             el.className = "text-xs font-bold text-gray-500 py-2";
             el.textContent = day;
@@ -235,7 +213,8 @@
             const dayOfWeek = dateObj.getDay();
             const closed = !openDays.has(dayOfWeek);
             const past = isPastDate(dateObj);
-            const fullyBooked = isDayFullyBooked(dateStr);
+            const fullyUnavailable =
+              !past && !closed && isDayFullyUnavailable(dateStr);
             const selected = selectedDate === dateStr;
 
             const btn = document.createElement("button");
@@ -246,7 +225,7 @@
                 "h-12 rounded-2xl text-sm font-semibold border shadow-sm flex items-center justify-center bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed";
               btn.disabled = true;
               btn.title = closed ? "Closed" : "Past date";
-            } else if (fullyBooked) {
+            } else if (fullyUnavailable) {
               btn.className =
                 "h-12 rounded-2xl text-sm font-semibold border shadow-sm flex items-center justify-center bg-red-100 text-red-400 border-red-200 cursor-not-allowed line-through";
               btn.disabled = true;
@@ -263,7 +242,7 @@
 
             btn.textContent = String(day);
 
-            if (!past && !closed && !fullyBooked) {
+            if (!past && !closed && !fullyUnavailable) {
               btn.addEventListener("click", async () => {
                 selectedDate = dateStr;
                 selectedTime = "";
@@ -288,7 +267,6 @@
           const timeGrid = document.getElementById("timeGrid");
           const notice = document.getElementById("timeNotice");
           if (!timeGrid || !notice) return;
-
           timeGrid.innerHTML = "";
           notice.textContent = "Choose from the open hours below.";
 
@@ -298,13 +276,15 @@
             btn.textContent = toPrettyTime(time);
 
             const isBlocked = isSlotBlocked(dateStr, time);
+            const isPast = isTimeInPast(dateStr, time);
             const isChosen = selectedTime === time;
+            const unavailable = isBlocked || isPast;
 
-            if (isBlocked) {
+            if (unavailable) {
               btn.disabled = true;
               btn.className =
-                "px-3 py-3 rounded-2xl border text-sm font-semibold bg-red-100 text-red-400 border-red-200 cursor-not-allowed line-through";
-              btn.title = "Already booked";
+                "px-3 py-3 rounded-2xl border text-sm font-semibold bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed line-through";
+              btn.title = isBlocked ? "Already booked" : "Time has passed";
             } else {
               btn.className =
                 "px-3 py-3 rounded-2xl border text-sm font-semibold transition " +
@@ -337,39 +317,41 @@
         }
 
         const form = document.getElementById("groomingForm");
-        const openBtn = document.getElementById("openCalendarBtn");
-        const closeBtn = document.getElementById("closeCalendar");
-        const closeBottomBtn = document.getElementById("closeCalendarBottom");
-        const prevBtn = document.getElementById("prevMonth");
-        const nextBtn = document.getElementById("nextMonth");
         const modal = document.getElementById("calendarModal");
 
-        openBtn.addEventListener("click", openCalendar);
-        closeBtn.addEventListener("click", () => modal.classList.add("hidden"));
-        closeBottomBtn.addEventListener("click", () =>
-          modal.classList.add("hidden"),
-        );
+        document
+          .getElementById("openCalendarBtn")
+          .addEventListener("click", openCalendar);
+        document
+          .getElementById("closeCalendar")
+          .addEventListener("click", () => modal.classList.add("hidden"));
+        document
+          .getElementById("closeCalendarBottom")
+          .addEventListener("click", () => modal.classList.add("hidden"));
         modal.addEventListener("click", (e) => {
           if (e.target === modal) modal.classList.add("hidden");
         });
 
-        prevBtn.addEventListener("click", async () => {
-          currentDate.setMonth(currentDate.getMonth() - 1);
-          await loadBlockedSlots();
-          renderCalendar();
-          if (selectedDate) renderTimeSlots(selectedDate);
-        });
+        document
+          .getElementById("prevMonth")
+          .addEventListener("click", async () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            await loadBlockedSlots();
+            renderCalendar();
+            if (selectedDate) renderTimeSlots(selectedDate);
+          });
 
-        nextBtn.addEventListener("click", async () => {
-          currentDate.setMonth(currentDate.getMonth() + 1);
-          await loadBlockedSlots();
-          renderCalendar();
-          if (selectedDate) renderTimeSlots(selectedDate);
-        });
+        document
+          .getElementById("nextMonth")
+          .addEventListener("click", async () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            await loadBlockedSlots();
+            renderCalendar();
+            if (selectedDate) renderTimeSlots(selectedDate);
+          });
 
         form.addEventListener("submit", async function (e) {
           e.preventDefault();
-
           const btn = document.getElementById("submitBtn");
           const msg = document.getElementById("formMsg");
           const date = document.getElementById("selectedDateInput").value;
@@ -382,10 +364,17 @@
             return;
           }
 
-          try {
-            // Re-fetch latest slots right before submitting to prevent race conditions
-            await loadBlockedSlots();
+          // Final guard: did the time pass while they were filling out the form?
+          if (isTimeInPast(date, time)) {
+            msg.textContent =
+              "That time has already passed. Please choose another.";
+            msg.classList.remove("hidden", "text-green-600");
+            msg.classList.add("text-red-600");
+            return;
+          }
 
+          try {
+            await loadBlockedSlots();
             if (isSlotBlocked(date, time)) {
               msg.textContent =
                 "That time was just booked. Please choose another.";
@@ -459,7 +448,6 @@
           .querySelectorAll(".fade-up")
           .forEach((el) => observer.observe(el));
 
-        // Initial load
         loadBlockedSlots().then(renderCalendar);
       });
     </script>
@@ -496,10 +484,8 @@
         <a
           href="tel:7174333714"
           class="hidden md:flex items-center gap-3 bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-xl font-semibold transition shadow-lg"
+          ><i class="fa-solid fa-phone"></i> (717) 433-3714</a
         >
-          <i class="fa-solid fa-phone"></i>
-          (717) 433-3714
-        </a>
       </div>
     </nav>
 
@@ -518,8 +504,8 @@
           <div
             class="glass inline-flex items-center gap-3 text-white px-5 py-3 rounded-full mb-8 border border-white/20"
           >
-            <i class="fa-solid fa-star text-yellow-300"></i>
-            Professional Grooming in Hershey, PA
+            <i class="fa-solid fa-star text-yellow-300"></i> Professional
+            Grooming in Hershey, PA
           </div>
           <h1
             class="text-5xl md:text-7xl font-black text-white leading-tight mb-8"
@@ -535,15 +521,13 @@
             <a
               href="#contact"
               class="bg-amber-600 hover:bg-amber-700 text-white px-8 py-5 rounded-2xl font-bold text-lg shadow-2xl transition"
+              >Request Grooming Session</a
             >
-              Request Grooming Session
-            </a>
             <a
               href="tel:7174333714"
               class="border-2 border-white text-white hover:bg-white hover:text-black px-8 py-5 rounded-2xl font-bold text-lg transition"
+              >Call Now</a
             >
-              Call Now
-            </a>
           </div>
           <div class="mt-12 flex flex-wrap gap-8 text-white">
             <div class="flex items-center gap-3">
@@ -570,8 +554,8 @@
             class="inline-flex flex-col sm:flex-row items-center gap-4 bg-amber-50 border border-amber-200 rounded-2xl px-8 py-5 mb-8 shadow-sm"
           >
             <div class="flex items-center gap-2 text-amber-700">
-              <i class="fa-regular fa-clock text-xl"></i>
-              <span class="font-bold text-lg">Hours</span>
+              <i class="fa-regular fa-clock text-xl"></i
+              ><span class="font-bold text-lg">Hours</span>
             </div>
             <div class="hidden sm:block w-px h-8 bg-amber-200"></div>
             <div
@@ -581,8 +565,7 @@
                 <span
                   class="block text-sm text-amber-600 font-semibold uppercase tracking-wider"
                   >Tue – Sat</span
-                >
-                <span class="block text-gray-800 font-bold text-lg"
+                ><span class="block text-gray-800 font-bold text-lg"
                   >9:00 AM – 7:00 PM</span
                 >
               </div>
@@ -591,8 +574,7 @@
                 <span
                   class="block text-sm text-gray-400 font-semibold uppercase tracking-wider"
                   >Sun – Mon</span
-                >
-                <span class="block text-gray-400 font-bold text-lg"
+                ><span class="block text-gray-400 font-bold text-lg"
                   >Closed</span
                 >
               </div>
@@ -752,9 +734,9 @@
         <div class="text-center mb-16">
           <h2 class="text-5xl font-black mb-5">What Pet Parents Say</h2>
           <div class="flex justify-center text-yellow-400 text-2xl gap-2 mb-4">
-            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
-            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
-            <i class="fa-solid fa-star"></i>
+            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i
+            ><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i
+            ><i class="fa-solid fa-star"></i>
           </div>
         </div>
         <div class="grid md:grid-cols-3 gap-8">
@@ -844,18 +826,16 @@
                 style="border: 0"
                 allowfullscreen=""
                 loading="lazy"
-              >
-              </iframe>
+              ></iframe>
             </div>
           </div>
-
           <form
             id="groomingForm"
             class="bg-amber-50 rounded-3xl p-10 shadow-sm space-y-6"
           >
             <div>
-              <label class="block font-semibold mb-3">Your Name</label>
-              <input
+              <label class="block font-semibold mb-3">Your Name</label
+              ><input
                 type="text"
                 name="name"
                 required
@@ -863,8 +843,8 @@
               />
             </div>
             <div>
-              <label class="block font-semibold mb-3">Email</label>
-              <input
+              <label class="block font-semibold mb-3">Email</label
+              ><input
                 type="email"
                 name="email"
                 required
@@ -872,8 +852,8 @@
               />
             </div>
             <div>
-              <label class="block font-semibold mb-3">Phone Number</label>
-              <input
+              <label class="block font-semibold mb-3">Phone Number</label
+              ><input
                 type="tel"
                 name="phone"
                 required
@@ -903,8 +883,7 @@
             <div>
               <label class="block font-semibold mb-3"
                 >Tell Us About Your Dog</label
-              >
-              <textarea
+              ><textarea
                 name="message"
                 rows="5"
                 required
@@ -947,16 +926,14 @@
             target="_blank"
             aria-label="Facebook"
             class="hover:text-blue-500 transition"
-          >
-            <i class="fa-brands fa-facebook"></i>
-          </a>
+            ><i class="fa-brands fa-facebook"></i
+          ></a>
           <a
             href="tel:7174333714"
             aria-label="Phone"
             class="hover:text-amber-500 transition"
-          >
-            <i class="fa-solid fa-phone"></i>
-          </a>
+            ><i class="fa-solid fa-phone"></i
+          ></a>
         </div>
         <div class="text-sm border-t border-gray-800 pt-8">
           © 2026 Chocolate Avenue Grooming Salon • All Rights Reserved
@@ -964,13 +941,11 @@
       </div>
     </footer>
 
-    <!-- FLOATING CALL BUTTON -->
     <a
       href="tel:7174333714"
       class="floating-call fixed bottom-5 right-5 bg-amber-600 hover:bg-amber-700 text-white w-16 h-16 rounded-full shadow-2xl flex items-center justify-center text-2xl z-50 md:hidden"
-    >
-      <i class="fa-solid fa-phone"></i>
-    </a>
+      ><i class="fa-solid fa-phone"></i
+    ></a>
 
     <!-- CALENDAR MODAL -->
     <div
@@ -1015,7 +990,6 @@
               class="grid grid-cols-7 gap-2 text-center"
             ></div>
           </div>
-
           <div class="p-6 md:p-8 bg-amber-50">
             <div class="flex items-center justify-between mb-4">
               <div>
@@ -1028,7 +1002,6 @@
                 id="closeCalendar"
                 type="button"
                 class="text-gray-500 hover:text-gray-800 text-2xl"
-                aria-label="Close calendar"
               >
                 <i class="fa-solid fa-xmark"></i>
               </button>
@@ -1046,7 +1019,7 @@
               <p id="timeNotice" class="text-sm text-gray-600 mb-4"></p>
               <div id="timeGrid" class="grid grid-cols-2 gap-3"></div>
               <p class="mt-4 text-sm text-gray-500">
-                Strikethrough times are already booked.
+                Grayed times are past or already booked.
               </p>
             </div>
             <button

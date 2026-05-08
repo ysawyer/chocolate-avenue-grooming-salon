@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CAGS Admin | Chocolate Avenue Grooming</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
+    />
+    <style>
+      .glass {
+        backdrop-filter: blur(16px);
+        background: rgba(255, 255, 255, 0.75);
+      }
+      .booking-card {
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
+      }
+      .booking-card:hover {
+        transform: translateY(-4px);
+      }
+    </style>
+  </head>
+  <body
+    class="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-100 text-gray-800 font-sans"
+  >
+    <!-- LOGIN VIEW -->
+    <section
+      id="loginView"
+      class="min-h-screen flex items-center justify-center p-6"
+    >
+      <div
+        class="w-full max-w-md bg-white/80 glass border border-white rounded-[2rem] shadow-2xl p-10"
+      >
+        <div class="text-center mb-8">
+          <div
+            class="inline-flex items-center justify-center w-16 h-16 bg-amber-600 text-white rounded-2xl mb-4 shadow-lg shadow-amber-200"
+          >
+            <i class="fa-solid fa-paw text-2xl"></i>
+          </div>
+          <h1 class="text-3xl font-black text-gray-900">Admin Login</h1>
+          <p class="text-gray-500 mt-2">Chocolate Avenue Grooming Salon</p>
+        </div>
+        <form id="loginForm" class="space-y-5">
+          <input
+            id="email"
+            type="text"
+            placeholder="Admin Email (cagsdogs@gmail.com)"
+            class="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none transition"
+            required
+          />
+          <input
+            id="password"
+            type="password"
+            placeholder="Password"
+            class="w-full px-5 py-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none transition"
+            required
+          />
+          <button
+            type="submit"
+            class="w-full bg-amber-600 hover:bg-amber-700 text-white py-4 rounded-2xl font-bold shadow-lg shadow-amber-200 transition-all active:scale-[0.98]"
+          >
+            Sign In
+          </button>
+        </form>
+        <p
+          id="loginMsg"
+          class="mt-4 text-center text-red-500 text-sm font-medium"
+        ></p>
+      </div>
+    </section>
+
+    <!-- DASHBOARD VIEW -->
+    <section id="dashboardView" class="hidden">
+      <header
+        class="sticky top-0 z-50 bg-white/70 backdrop-blur-md border-b border-white/60"
+      >
+        <div
+          class="max-w-7xl mx-auto px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4"
+        >
+          <div>
+            <h1 class="text-2xl font-black text-gray-900 tracking-tight">
+              CAGS Dashboard
+            </h1>
+            <p
+              id="adminEmailLabel"
+              class="text-sm text-amber-700 font-medium"
+            ></p>
+          </div>
+          <div class="flex items-center gap-3">
+            <button
+              id="logoutBtn"
+              class="px-5 py-2.5 rounded-xl bg-gray-100 hover:bg-red-50 hover:text-red-600 font-bold transition"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main class="max-w-7xl mx-auto px-6 py-8">
+        <!-- STATS BAR -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div class="bg-white p-6 rounded-3xl border border-white shadow-sm">
+            <p class="text-gray-500 text-xs font-bold uppercase tracking-wider">
+              Total
+            </p>
+            <p id="statsTotal" class="text-3xl font-black mt-1">0</p>
+          </div>
+          <div class="bg-white p-6 rounded-3xl border border-white shadow-sm">
+            <p
+              class="text-amber-500 text-xs font-bold uppercase tracking-wider"
+            >
+              Pending
+            </p>
+            <p id="statsPending" class="text-3xl font-black mt-1">0</p>
+          </div>
+          <div
+            class="bg-white p-6 rounded-3xl border border-white shadow-sm text-green-600"
+          >
+            <p
+              class="text-green-500 text-xs font-bold uppercase tracking-wider"
+            >
+              Approved
+            </p>
+            <p id="statsApproved" class="text-3xl font-black mt-1">0</p>
+          </div>
+          <div
+            class="bg-white p-6 rounded-3xl border border-white shadow-sm text-red-600"
+          >
+            <p class="text-red-500 text-xs font-bold uppercase tracking-wider">
+              Rejected
+            </p>
+            <p id="statsRejected" class="text-3xl font-black mt-1">0</p>
+          </div>
+        </div>
+
+        <!-- SEARCH & FILTER -->
+        <div class="flex flex-col md:flex-row gap-4 mb-8">
+          <div class="relative flex-1">
+            <i
+              class="fa-solid fa-search absolute left-5 top-1/2 -translate-y-1/2 text-gray-400"
+            ></i>
+            <input
+              id="searchInput"
+              type="text"
+              placeholder="Search customer name, email, phone..."
+              class="w-full pl-12 pr-5 py-4 rounded-2xl bg-white border-none shadow-sm focus:ring-2 focus:ring-amber-500 outline-none"
+            />
+          </div>
+          <select
+            id="statusFilter"
+            class="px-6 py-4 rounded-2xl bg-white border-none shadow-sm font-bold text-gray-600 outline-none"
+          >
+            <option value="all">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+
+        <!-- BOOKING LIST GRID -->
+        <div
+          id="bookingList"
+          class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+        >
+          <!-- Rendered via JS -->
+        </div>
+      </main>
+    </section>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+      import {
+        getAuth,
+        onAuthStateChanged,
+        signInWithEmailAndPassword,
+        signOut,
+      } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
+      import {
+        getFirestore,
+        collection,
+        onSnapshot,
+        updateDoc,
+        deleteDoc,
+        doc,
+      } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyDGboX-vIjRHG8c1WH96-ggXFTp6MwVFCk",
+        authDomain: "chocolate-avenue-grooming.firebaseapp.com",
+        projectId: "chocolate-avenue-grooming",
+        storageBucket: "chocolate-avenue-grooming.firebasestorage.app",
+        messagingSenderId: "598219200758",
+        appId: "1:598219200758:web:715700a519b5ace9aff4d7",
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+
+      const state = { bookings: [], filter: "all", search: "" };
+
+      // --- HELPERS ---
+      const fmtTime = (t) => {
+        if (!t) return "N/A";
+        const [h, m] = t.split(":").map(Number);
+        return `${h % 12 || 12}:${m.toString().padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
+      };
+
+      const fmtDate = (d) =>
+        d
+          ? new Date(d.replace(/-/g, "/")).toLocaleDateString("en-US", {
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+            })
+          : "N/A";
+
+      const getBadgeClass = (s) => {
+        if (s === "approved")
+          return "bg-green-100 text-green-700 border-green-200";
+        if (s === "rejected") return "bg-red-100 text-red-700 border-red-200";
+        return "bg-amber-100 text-amber-700 border-amber-200";
+      };
+
+      // --- ACTIONS (FIXED DELETE HERE) ---
+      document
+        .getElementById("bookingList")
+        .addEventListener("click", async (e) => {
+          const btn = e.target.closest("button[data-id]");
+          if (!btn) return;
+
+          const { id, action } = btn.dataset;
+          const docRef = doc(db, "appointments", id); // MATCHES RULES
+
+          try {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+
+            if (action === "delete") {
+              if (confirm("Permanently delete this record?"))
+                await deleteDoc(docRef);
+            } else {
+              await updateDoc(docRef, {
+                status:
+                  action === "approve"
+                    ? "approved"
+                    : action === "reject"
+                      ? "rejected"
+                      : "pending",
+              });
+            }
+          } catch (err) {
+            alert("Error: " + err.message);
+          }
+        });
+
+      // --- LOGIN ---
+      document
+        .getElementById("loginForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const email = document.getElementById("email").value.trim();
+          const pass = document.getElementById("password").value;
+          try {
+            await signInWithEmailAndPassword(auth, email, pass);
+          } catch (err) {
+            document.getElementById("loginMsg").textContent =
+              "Login Failed: Check credentials.";
+          }
+        });
+
+      document.getElementById("logoutBtn").onclick = () => signOut(auth);
+
+      // --- FILTERING & RENDERING ---
+      function updateUI() {
+        const rows = state.bookings.filter((b) => {
+          const matchStatus =
+            state.filter === "all" || b.status === state.filter;
+          const q = state.search.toLowerCase();
+          const matchSearch = !q || JSON.stringify(b).toLowerCase().includes(q);
+          return matchStatus && matchSearch;
+        });
+
+        document.getElementById("statsTotal").textContent =
+          state.bookings.length;
+        document.getElementById("statsPending").textContent =
+          state.bookings.filter(
+            (x) => x.status === "pending" || !x.status,
+          ).length;
+        document.getElementById("statsApproved").textContent =
+          state.bookings.filter((x) => x.status === "approved").length;
+        document.getElementById("statsRejected").textContent =
+          state.bookings.filter((x) => x.status === "rejected").length;
+
+        document.getElementById("bookingList").innerHTML =
+          rows
+            .map(
+              (b) => `
+          <article class="booking-card bg-white border border-gray-100 rounded-[2rem] shadow-sm p-6 flex flex-col">
+            <div class="flex justify-between items-start mb-4">
+              <div>
+                <h3 class="text-xl font-black text-gray-900">${b.name || "Anonymous"}</h3>
+                <p class="text-sm text-gray-500 font-medium">${b.email || ""}</p>
+              </div>
+              <span class="px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest ${getBadgeClass(b.status || "pending")}">
+                ${b.status || "pending"}
+              </span>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3 mb-5">
+              <div class="bg-gray-50 p-3 rounded-2xl">
+                <p class="text-[10px] font-bold text-gray-400 uppercase">Date</p>
+                <p class="font-bold text-sm">${fmtDate(b.date)}</p>
+              </div>
+              <div class="bg-gray-50 p-3 rounded-2xl">
+                <p class="text-[10px] font-bold text-gray-400 uppercase">Time</p>
+                <p class="font-bold text-sm">${fmtTime(b.time)}</p>
+              </div>
+            </div>
+
+            <p class="text-sm text-gray-600 italic bg-amber-50/50 p-3 rounded-xl border border-amber-100/50 mb-6 flex-grow">
+              "${b.message || "No message provided."}"
+            </p>
+
+            <div class="flex gap-2">
+              ${b.status !== "approved" ? `<button data-action="approve" data-id="${b.id}" class="flex-1 bg-green-600 text-white py-3 rounded-xl text-xs font-bold hover:bg-green-700 transition">Approve</button>` : ""}
+              ${b.status !== "rejected" ? `<button data-action="reject" data-id="${b.id}" class="flex-1 bg-red-600 text-white py-3 rounded-xl text-xs font-bold hover:bg-red-700 transition">Reject</button>` : ""}
+              ${b.status === "approved" || b.status === "rejected" ? `<button data-action="pending" data-id="${b.id}" class="flex-1 bg-amber-500 text-white py-3 rounded-xl text-xs font-bold hover:bg-amber-600 transition">Reset</button>` : ""}
+              <button data-action="delete" data-id="${b.id}" class="w-12 bg-gray-900 text-white py-3 rounded-xl hover:bg-black transition"><i class="fa-solid fa-trash-can"></i></button>
+            </div>
+          </article>
+        `,
+            )
+            .join("") ||
+          '<div class="col-span-full text-center py-20 text-gray-400 font-medium">No records found.</div>';
+      }
+
+      // --- SEARCH/FILTER EVENTS ---
+      document.getElementById("searchInput").oninput = (e) => {
+        state.search = e.target.value;
+        updateUI();
+      };
+      document.getElementById("statusFilter").onchange = (e) => {
+        state.filter = e.target.value;
+        updateUI();
+      };
+
+      // --- AUTH OBSERVER ---
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          document.getElementById("loginView").classList.add("hidden");
+          document.getElementById("dashboardView").classList.remove("hidden");
+          document.getElementById("adminEmailLabel").textContent = user.email;
+
+          // REAL-TIME SYNC
+          onSnapshot(
+            collection(db, "appointments"),
+            (snap) => {
+              state.bookings = snap.docs.map((d) => ({
+                id: d.id,
+                ...d.data(),
+              }));
+              updateUI();
+            },
+            (err) => console.error("Sync Error:", err),
+          );
+        } else {
+          document.getElementById("loginView").classList.remove("hidden");
+          document.getElementById("dashboardView").classList.add("hidden");
+        }
+      });
+    </script>
+  </body>
+</html>
